@@ -6,7 +6,7 @@ import sys
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 # Import custom modules
-from ui.finestra_principale import WritingAssistant
+from ui.main_window import WritingAssistant
 
 
 def verify_dependencies():

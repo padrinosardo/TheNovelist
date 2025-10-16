@@ -1,9 +1,9 @@
 """
 Module for linguistic and AI analysis
 """
-from .grammatica import GrammarAnalyzer
-from .ripetizioni import RepetitionAnalyzer
-from .stile import StyleAnalyzer
+from .grammar import GrammarAnalyzer
+from .repetition import RepetitionAnalyzer
+from .style import StyleAnalyzer
 
 __all__ = [
     'GrammarAnalyzer',

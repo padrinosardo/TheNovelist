@@ -7,14 +7,14 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from ui.pannelli import ResultsPanel, TextEditor
-from ui.stili import (STILE_BTN_GRAMMATICA, STILE_BTN_RIPETIZIONI,
-                      STILE_BTN_STILE, STILE_BTN_PULISCI, Stili)
+from ui.pannels import ResultsPanel, TextEditor
+from ui.styles import (STILE_BTN_GRAMMATICA, STILE_BTN_RIPETIZIONI,
+                       STILE_BTN_STILE, STILE_BTN_PULISCI, Stili)
 
-from workers.analisi_thread import AnalysisThread
-from analisi.grammatica import GrammarAnalyzer
-from analisi.ripetizioni import RepetitionAnalyzer
-from analisi.stile import StyleAnalyzer
+from workers.thread_analysis import AnalysisThread
+from analysis.grammar import GrammarAnalyzer
+from analysis.repetition import RepetitionAnalyzer
+from analysis.style import StyleAnalyzer
 
 
 class WritingAssistant(QMainWindow):

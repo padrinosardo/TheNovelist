@@ -3,9 +3,9 @@ Worker thread to execute analysis in background
 """
 from PySide6.QtCore import QThread, Signal
 
-from analisi.grammatica import GrammarAnalyzer
-from analisi.ripetizioni import RepetitionAnalyzer
-from analisi.stile import StyleAnalyzer
+from analysis.grammar import GrammarAnalyzer
+from analysis.repetition import RepetitionAnalyzer
+from analysis.style import StyleAnalyzer
 
 
 class AnalysisThread(QThread):

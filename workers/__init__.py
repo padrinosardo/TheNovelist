@@ -1,6 +1,6 @@
 """
 Worker threads module
 """
-from .analisi_thread import AnalysisThread
+from .thread_analysis import AnalysisThread
 
 __all__ = ['AnalysisThread']

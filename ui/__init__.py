@@ -1,9 +1,9 @@
 """
 User interface module
 """
-from .finestra_principale import WritingAssistant
-from .pannelli import ResultsPanel, TextEditor
-from .stili import Colori, Stili
+from .main_window import WritingAssistant
+from .pannels import ResultsPanel, TextEditor
+from .styles import Colori, Stili
 
 __all__ = [
     'WritingAssistant',
