@@ -1,0 +1,16 @@
+# TheNovelist - Dipendenze Python
+
+# Framework GUI
+PySide6>=6.6.0
+
+# Analisi linguistica
+language-tool-python>=2.8.0
+spacy>=3.7.0
+textstat>=0.7.3
+
+# Generazione AI (opzionale)
+ollama>=0.1.0
+
+# Note:
+# Dopo l'installazione, esegui:
+# python -m spacy download it_core_news_sm
