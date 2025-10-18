@@ -2,7 +2,28 @@
 TheNovelist - Writing Assistant
 Main file (main.py)
 """
+import os
 import sys
+import traceback
+import warnings
+
+# Enable detailed Qt warnings with traceback
+os.environ['QT_LOGGING_RULES'] = ''  # Enable ALL warnings temporarily
+
+
+# Capture warnings with traceback
+def warning_handler(message, category, filename, lineno, file=None, line=None):
+    print(f"\n{'=' * 60}")
+    print(f"WARNING: {message}")
+    print(f"File: {filename}:{lineno}")
+    print(f"Category: {category.__name__}")
+    print(f"{'=' * 60}")
+    traceback.print_stack()
+    print(f"{'=' * 60}\n")
+
+
+warnings.showwarning = warning_handler
+
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 # Import custom modules

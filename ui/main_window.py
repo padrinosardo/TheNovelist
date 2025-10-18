@@ -3,7 +3,12 @@ Main application window
 """
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QPushButton, QProgressBar, QSplitter,
-                               QGroupBox, QMessageBox)
+                               QGroupBox, QMessageBox, QFileDialog)  # Aggiungi QFileDialog
+
+from utils.file_manager import FileManager
+
+import os
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
@@ -30,6 +35,12 @@ class WritingAssistant(QMainWindow):
         self.grammar_analyzer = GrammarAnalyzer()
         self.repetitions_analyzer = RepetitionAnalyzer()
         self.style_analyzer = StyleAnalyzer()
+
+        # File manager
+        self.file_manager = FileManager()
+
+        # Track if document has unsaved changes
+        self.is_modified = False
 
         self._initialize_ui()
 
@@ -91,7 +102,38 @@ class WritingAssistant(QMainWindow):
         title.setFont(title_font)
         header_layout.addWidget(title)
 
+        # File name label
+        self.filename_label = QLabel("Untitled")
+        self.filename_label.setStyleSheet("color: #666; font-size: 12px; margin-left: 10px;")
+        header_layout.addWidget(self.filename_label)
+
         header_layout.addStretch()
+
+        # File buttons
+        self.btn_new = QPushButton("📄 New")
+        self.btn_new.clicked.connect(self.new_document)
+        self.btn_new.setStyleSheet(Stili.bottone("#607D8B"))
+        header_layout.addWidget(self.btn_new)
+
+        self.btn_open = QPushButton("📂 Open")
+        self.btn_open.clicked.connect(self.open_document)
+        self.btn_open.setStyleSheet(Stili.bottone("#607D8B"))
+        header_layout.addWidget(self.btn_open)
+
+        self.btn_save = QPushButton("💾 Save")
+        self.btn_save.clicked.connect(self.save_document)
+        self.btn_save.setStyleSheet(Stili.bottone("#4CAF50"))
+        header_layout.addWidget(self.btn_save)
+
+        self.btn_save_as = QPushButton("💾 Save As")
+        self.btn_save_as.clicked.connect(self.save_document_as)
+        self.btn_save_as.setStyleSheet(Stili.bottone("#4CAF50"))
+        header_layout.addWidget(self.btn_save_as)
+
+        # Separator
+        separator = QLabel("|")
+        separator.setStyleSheet("color: #ccc; margin: 0 10px;")
+        header_layout.addWidget(separator)
 
         # Analysis buttons
         self.btn_grammar = QPushButton("📖 Grammar")
@@ -125,6 +167,10 @@ class WritingAssistant(QMainWindow):
 
         # Custom editor widget
         self.editor = TextEditor()
+
+        # Track changes
+        self.editor.editor.textChanged.connect(self._on_text_changed)
+
         layout.addWidget(self.editor)
 
         return group
@@ -197,7 +243,7 @@ class WritingAssistant(QMainWindow):
 
         # Start thread
         self.analysis_thread = AnalysisThread(text, analysis_type)
-        self.analysis_thread.finito.connect(
+        self.analysis_thread.finished.connect(
             lambda result: self._handle_result(
                 result, panel, analysis_name, analysis_type
             )
@@ -245,7 +291,7 @@ class WritingAssistant(QMainWindow):
     def analyze_grammar(self):
         """Start grammar analysis"""
         self._start_analysis(
-            AnalisiThread.TIPO_GRAMMATICA,
+            AnalysisThread.TYPE_GRAMMAR,
             self.grammar_panel,
             "Grammar analysis"
         )
@@ -253,7 +299,7 @@ class WritingAssistant(QMainWindow):
     def analyze_repetitions(self):
         """Start repetitions analysis"""
         self._start_analysis(
-            AnalisiThread.TIPO_RIPETIZIONI,
+            AnalysisThread.TYPE_REPETITIONS,
             self.repetitions_panel,
             "Repetitions analysis"
         )
@@ -261,7 +307,8 @@ class WritingAssistant(QMainWindow):
     def analyze_style(self):
         """Start style analysis"""
         self._start_analysis(
-            AnalisiThread.TIPO_STILE,
+
+            AnalysisThread.TYPE_STYLE,
             self.style_panel,
             "Style analysis"
         )
@@ -281,3 +328,145 @@ class WritingAssistant(QMainWindow):
             self.repetitions_panel.clear()
             self.style_panel.clear()
             self.statusBar().showMessage("All cleared", 2000)
+
+
+    def _on_text_changed(self):
+        """Called when text is modified"""
+        if not self.is_modified:
+            self.is_modified = True
+            self._update_window_title()
+
+
+    def _update_window_title(self):
+        """Update window title with filename and modified status"""
+        filename = self.file_manager.get_filename()
+        modified = "*" if self.is_modified else ""
+        self.setWindowTitle(f"📝 The Novelist - {filename}{modified}")
+        self.filename_label.setText(f"{filename}{modified}")
+
+
+    def new_document(self):
+        """Create a new document"""
+        if self.is_modified:
+            response = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "Do you want to save changes before creating a new document?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            )
+
+            if response == QMessageBox.Save:
+                if not self.save_document():
+                    return  # Cancelled save
+            elif response == QMessageBox.Cancel:
+                return
+
+        # Clear everything
+        self.editor.clear()
+        self.grammar_panel.clear()
+        self.repetitions_panel.clear()
+        self.style_panel.clear()
+
+        # Reset state
+        self.file_manager.clear_file()
+        self.is_modified = False
+        self._update_window_title()
+
+        self.statusBar().showMessage("New document created", 2000)
+
+
+    def open_document(self):
+        """Open an existing document"""
+        if self.is_modified:
+            response = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                "Do you want to save changes before opening another document?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel
+            )
+
+            if response == QMessageBox.Save:
+                if not self.save_document():
+                    return
+            elif response == QMessageBox.Cancel:
+                return
+
+        # Show open dialog
+        filepath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Document",
+            self.file_manager.last_directory,
+            self.file_manager.get_file_filter()
+        )
+
+        if not filepath:
+            return  # Cancelled
+
+        # Load file
+        text = self.file_manager.load_document(filepath)
+
+        if text is not None:
+            self.editor.set_text(text)
+            self.is_modified = False
+            self._update_window_title()
+            self.statusBar().showMessage(f"Opened: {self.file_manager.get_filename()}", 3000)
+        else:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Could not open file:\n{filepath}"
+            )
+
+
+    def save_document(self):
+        """Save current document"""
+        if not self.file_manager.has_file():
+            return self.save_document_as()
+
+        text = self.editor.get_text()
+
+        if self.file_manager.save_document(text, self.file_manager.current_file):
+            self.is_modified = False
+            self._update_window_title()
+            self.statusBar().showMessage(f"Saved: {self.file_manager.get_filename()}", 3000)
+            return True
+        else:
+            QMessageBox.critical(
+                self,
+                "Error",
+                "Could not save file"
+            )
+            return False
+
+
+    def save_document_as(self):
+        """Save current document with a new name"""
+        # Show save dialog
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Document As",
+            self.file_manager.last_directory,
+            self.file_manager.get_file_filter()
+        )
+
+        if not filepath:
+            return False  # Cancelled
+
+        # Add extension if missing
+        if not os.path.splitext(filepath)[1]:
+            filepath += ".txt"
+
+        text = self.editor.get_text()
+
+        if self.file_manager.save_document(text, filepath):
+            self.is_modified = False
+            self._update_window_title()
+            self.statusBar().showMessage(f"Saved as: {self.file_manager.get_filename()}", 3000)
+            return True
+        else:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Could not save file:\n{filepath}"
+            )
+            return False

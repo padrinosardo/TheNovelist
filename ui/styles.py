@@ -12,6 +12,7 @@ class Colori:
     ACCENTO = "#FF9800"
     PERICOLO = "#f44336"
     VIOLA = "#9C27B0"
+    GRIGIO = "#607D8B"
 
     # Colori di sfondo
     SFONDO = "#f0f0f0"

@@ -2,7 +2,7 @@
 Custom widgets for the interface panels
 """
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QLabel,
-                               QScrollArea, QTextEdit)
+                               QScrollArea, QPlainTextEdit)
 from PySide6.QtCore import Qt
 
 
@@ -45,7 +45,8 @@ class ResultsPanel(QFrame):
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: none; }")
 
-        self.content = QTextEdit()
+        # Use QPlainTextEdit instead of QTextEdit - simpler, fewer cursor issues
+        self.content = QPlainTextEdit()
         self.content.setReadOnly(True)
         self.content.setPlaceholderText(
             f"Click 'Analyze {self.title_text}' to see results..."
@@ -61,12 +62,7 @@ class ResultsPanel(QFrame):
         Args:
             text: Text to display
         """
-        # Robust solution to avoid Qt warnings
-        self.content.blockSignals(True)
-        self.content.clear()
-        if text:  # Only set if there's text
-            self.content.setPlainText(text)
-        self.content.blockSignals(False)
+        self.content.setPlainText(text if text else "")
 
     def append_text(self, text):
         """
@@ -75,15 +71,12 @@ class ResultsPanel(QFrame):
         Args:
             text: Text to append
         """
-        self.content.blockSignals(True)
-        self.content.append(text)
-        self.content.blockSignals(False)
+        if text:
+            self.content.appendPlainText(text)
 
     def clear(self):
         """Clear the results"""
-        self.content.blockSignals(True)
         self.content.clear()
-        self.content.blockSignals(False)
 
     def get_text(self):
         """
@@ -115,8 +108,8 @@ class TextEditor(QFrame):
         self.counter_info.setStyleSheet("color: #666; padding: 5px;")
         layout.addWidget(self.counter_info)
 
-        # Main editor
-        self.editor = QTextEdit()
+        # Main editor - use QPlainTextEdit
+        self.editor = QPlainTextEdit()
         self.editor.setPlaceholderText(
             "Start writing your text here...\n\n"
             "Use the buttons above to analyze grammar, "
@@ -152,14 +145,10 @@ class TextEditor(QFrame):
         Args:
             text: Text to set
         """
-        self.editor.blockSignals(True)
-        self.editor.setPlainText(text)
-        self.editor.blockSignals(False)
+        self.editor.setPlainText(text if text else "")
         self._update_counter()
 
     def clear(self):
         """Clear the editor"""
-        self.editor.blockSignals(True)
         self.editor.clear()
-        self.editor.blockSignals(False)
         self._update_counter()
