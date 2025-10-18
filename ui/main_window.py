@@ -80,12 +80,16 @@ class WritingAssistant(QMainWindow):
         self.progress.setVisible(False)
         self.progress.setMaximumHeight(20)
         self.progress.setStyleSheet(Stili.progress_bar())
+
+
         main_layout.addWidget(self.progress)
 
         # Status bar
         self.statusBar().showMessage(
             "Ready - Write your text and analyze it with the buttons"
         )
+
+
 
     def _create_header(self):
         """Create header with title and buttons"""
@@ -251,15 +255,7 @@ class WritingAssistant(QMainWindow):
         self.analysis_thread.start()
 
     def _handle_result(self, result, panel, analysis_name, analysis_type):
-        """
-        Handle analysis result
-
-        Args:
-            result: Analysis result
-            panel: Panel where to show
-            analysis_name: Analysis name
-            analysis_type: Analysis type
-        """
+        """Handle analysis result"""
         # Hide progress and re-enable buttons
         self.progress.setVisible(False)
         self._set_buttons_enabled(True)
@@ -267,6 +263,11 @@ class WritingAssistant(QMainWindow):
         # Format and show result
         if analysis_type == AnalysisThread.TYPE_GRAMMAR:
             formatted_text = self.grammar_analyzer.format_results(result)
+
+            # NUOVO: Highlight errors in editor
+            if result.get('success') and result.get('errors'):
+                self.editor.highlight_errors(result['errors'])
+
         elif analysis_type == AnalysisThread.TYPE_REPETITIONS:
             formatted_text = self.repetitions_analyzer.format_results(result)
         elif analysis_type == AnalysisThread.TYPE_STYLE:
@@ -277,7 +278,7 @@ class WritingAssistant(QMainWindow):
         panel.set_text(formatted_text)
 
         # Status message
-        if result.get('successo'):
+        if result.get('success'):
             self.statusBar().showMessage(f"{analysis_name} completed", 3000)
         else:
             self.statusBar().showMessage(f"Error in {analysis_name}", 3000)
@@ -324,6 +325,7 @@ class WritingAssistant(QMainWindow):
 
         if response == QMessageBox.Yes:
             self.editor.clear()
+            self.editor.clear_highlights()  # AGGIUNGI QUESTA RIGA
             self.grammar_panel.clear()
             self.repetitions_panel.clear()
             self.style_panel.clear()
