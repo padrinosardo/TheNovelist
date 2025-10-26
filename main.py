@@ -27,7 +27,7 @@ warnings.showwarning = warning_handler
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 # Import custom modules
-from ui.main_window import WritingAssistant
+from ui.new_main_window import TheNovelistMainWindow
 
 
 def verify_dependencies():
@@ -64,7 +64,7 @@ def main():
         sys.exit(1)
 
     # Create and show main window
-    window = WritingAssistant()
+    window = TheNovelistMainWindow()
     window.show()
 
     # Start event loop
