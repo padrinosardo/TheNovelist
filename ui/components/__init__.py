@@ -8,6 +8,11 @@ from .manuscript_view import ManuscriptView
 from .characters_list_view import CharactersListView
 from .character_detail_view import CharacterDetailView
 from .image_gallery import ImageGalleryWidget
+from .statistics_dashboard import StatisticsDashboard
+from .scene_management_dialogs import (ChapterDialog, SceneDialog,
+                                       show_delete_chapter_confirmation,
+                                       show_delete_scene_confirmation)
+from .quick_scene_dialog import QuickSceneDialog
 
 __all__ = [
     'MenuBar',
@@ -16,5 +21,11 @@ __all__ = [
     'ManuscriptView',
     'CharactersListView',
     'CharacterDetailView',
-    'ImageGalleryWidget'
+    'ImageGalleryWidget',
+    'StatisticsDashboard',
+    'ChapterDialog',
+    'SceneDialog',
+    'show_delete_chapter_confirmation',
+    'show_delete_scene_confirmation',
+    'QuickSceneDialog'
 ]

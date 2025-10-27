@@ -219,20 +219,39 @@ class CharacterDetailView(QWidget):
         self.image_gallery.load_images([])
 
     def _on_save(self):
-        """Handle save button click"""
+        """Handle save button click with validation"""
         if not self.character_manager or not self._current_character_id:
             return
 
+        from utils.validators import Validators
+
         name = self.name_input.text().strip()
-        if not name:
+
+        # Validate character name
+        is_valid, error_msg = Validators.validate_character_name(name)
+        if not is_valid:
+            # Highlight field in red
+            self.name_input.setStyleSheet("border: 2px solid red;")
             QMessageBox.warning(
                 self,
-                "Invalid Input",
-                "Please enter a character name."
+                "Invalid Character Name",
+                error_msg
             )
             return
 
+        # Clear error styling
+        self.name_input.setStyleSheet("")
+
         description = self.description_input.toPlainText().strip()
+
+        # Validate description length (optional, max 10000 chars)
+        if len(description) > 10000:
+            QMessageBox.warning(
+                self,
+                "Description Too Long",
+                "Character description cannot exceed 10,000 characters."
+            )
+            return
 
         # Update character
         self.character_manager.update_character(

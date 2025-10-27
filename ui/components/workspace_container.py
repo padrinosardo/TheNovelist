@@ -20,6 +20,7 @@ class WorkspaceContainer(QStackedWidget):
     VIEW_MANUSCRIPT = "manuscript"
     VIEW_CHARACTERS_LIST = "characters_list"
     VIEW_CHARACTER_DETAIL = "character_detail"
+    VIEW_STATISTICS = "statistics"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -91,3 +92,7 @@ class WorkspaceContainer(QStackedWidget):
     def show_character_detail(self):
         """Show the character detail view"""
         self.show_view(self.VIEW_CHARACTER_DETAIL)
+
+    def show_statistics(self):
+        """Show the statistics dashboard view"""
+        self.show_view(self.VIEW_STATISTICS)

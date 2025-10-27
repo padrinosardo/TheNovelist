@@ -18,6 +18,8 @@ class MenuBar(QMenuBar):
     save_project_requested = Signal()
     save_project_as_requested = Signal()
     close_project_requested = Signal()
+    create_backup_requested = Signal()
+    restore_backup_requested = Signal()
     exit_requested = Signal()
 
     # Edit menu signals
@@ -28,6 +30,15 @@ class MenuBar(QMenuBar):
     paste_requested = Signal()
     find_requested = Signal()
     replace_requested = Signal()
+
+    # Manuscript menu signals
+    add_chapter_requested = Signal()
+    add_scene_requested = Signal()
+    rename_requested = Signal()
+    delete_requested = Signal()
+    previous_scene_requested = Signal()
+    next_scene_requested = Signal()
+    go_to_scene_requested = Signal()
 
     # View menu signals
     toggle_sidebar_requested = Signal()
@@ -43,6 +54,8 @@ class MenuBar(QMenuBar):
 
     # Help menu signals
     documentation_requested = Signal()
+    view_error_log_requested = Signal()
+    report_issue_requested = Signal()
     about_requested = Signal()
 
     def __init__(self, parent=None):
@@ -54,6 +67,7 @@ class MenuBar(QMenuBar):
         """Create all menus"""
         self._create_file_menu()
         self._create_edit_menu()
+        self._create_manuscript_menu()
         self._create_view_menu()
         self._create_tools_menu()
         self._create_help_menu()
@@ -111,6 +125,22 @@ class MenuBar(QMenuBar):
 
         file_menu.addSeparator()
 
+        # Create Backup
+        backup_action = QAction("Create &Backup", self)
+        backup_action.setStatusTip("Create a backup of the current project")
+        backup_action.triggered.connect(self.create_backup_requested.emit)
+        file_menu.addAction(backup_action)
+        self.backup_action = backup_action
+
+        # Restore from Backup
+        restore_action = QAction("Restore from Backup...", self)
+        restore_action.setStatusTip("Restore project from a backup file")
+        restore_action.triggered.connect(self.restore_backup_requested.emit)
+        file_menu.addAction(restore_action)
+        self.restore_action = restore_action
+
+        file_menu.addSeparator()
+
         # Exit
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut(QKeySequence.StandardKey.Quit)
@@ -159,16 +189,94 @@ class MenuBar(QMenuBar):
         edit_menu.addSeparator()
 
         # Find
-        find_action = QAction("&Find", self)
-        find_action.setShortcut(QKeySequence.StandardKey.Find)
+        find_action = QAction("&Find...", self)
+        find_action.setShortcut(QKeySequence.StandardKey.Find)  # Cmd+F on Mac, Ctrl+F on others
         find_action.triggered.connect(self.find_requested.emit)
         edit_menu.addAction(find_action)
+        self.find_action = find_action
 
         # Replace
-        replace_action = QAction("&Replace", self)
-        replace_action.setShortcut(QKeySequence.StandardKey.Replace)
+        replace_action = QAction("&Replace...", self)
+        # On Mac, use Cmd+Option+F instead of Cmd+H (which hides the app)
+        import sys
+        if sys.platform == 'darwin':  # macOS
+            replace_action.setShortcut(QKeySequence("Ctrl+Alt+F"))
+        else:
+            replace_action.setShortcut(QKeySequence.StandardKey.Replace)
         replace_action.triggered.connect(self.replace_requested.emit)
         edit_menu.addAction(replace_action)
+        self.replace_action = replace_action
+
+    def _create_manuscript_menu(self):
+        """Create Manuscript menu"""
+        import sys
+        manuscript_menu = self.addMenu("&Manuscript")
+
+        # Add Chapter
+        add_chapter_action = QAction("Add &Chapter", self)
+        add_chapter_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        add_chapter_action.setStatusTip("Add a new chapter to the manuscript")
+        add_chapter_action.triggered.connect(self.add_chapter_requested.emit)
+        manuscript_menu.addAction(add_chapter_action)
+        self.add_chapter_action = add_chapter_action
+
+        # Add Scene
+        add_scene_action = QAction("Add &Scene", self)
+        # Use Ctrl+Alt+N to avoid conflict with Cmd+N (New Project)
+        add_scene_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
+        add_scene_action.setStatusTip("Add a new scene to the current chapter")
+        add_scene_action.triggered.connect(self.add_scene_requested.emit)
+        manuscript_menu.addAction(add_scene_action)
+        self.add_scene_action = add_scene_action
+
+        manuscript_menu.addSeparator()
+
+        # Rename
+        rename_action = QAction("&Rename", self)
+        rename_action.setShortcut(QKeySequence("F2"))
+        rename_action.setStatusTip("Rename the selected chapter or scene")
+        rename_action.triggered.connect(self.rename_requested.emit)
+        manuscript_menu.addAction(rename_action)
+        self.rename_action = rename_action
+
+        # Delete
+        delete_action = QAction("&Delete", self)
+        if sys.platform == 'darwin':  # macOS
+            delete_action.setShortcut(QKeySequence("Ctrl+Backspace"))
+        else:
+            delete_action.setShortcut(QKeySequence.StandardKey.Delete)
+        delete_action.setStatusTip("Delete the selected chapter or scene")
+        delete_action.triggered.connect(self.delete_requested.emit)
+        manuscript_menu.addAction(delete_action)
+        self.delete_action = delete_action
+
+        manuscript_menu.addSeparator()
+
+        # Previous Scene
+        prev_scene_action = QAction("&Previous Scene", self)
+        prev_scene_action.setShortcut(QKeySequence("Ctrl+["))
+        prev_scene_action.setStatusTip("Navigate to previous scene")
+        prev_scene_action.triggered.connect(self.previous_scene_requested.emit)
+        manuscript_menu.addAction(prev_scene_action)
+        self.prev_scene_action = prev_scene_action
+
+        # Next Scene
+        next_scene_action = QAction("&Next Scene", self)
+        next_scene_action.setShortcut(QKeySequence("Ctrl+]"))
+        next_scene_action.setStatusTip("Navigate to next scene")
+        next_scene_action.triggered.connect(self.next_scene_requested.emit)
+        manuscript_menu.addAction(next_scene_action)
+        self.next_scene_action = next_scene_action
+
+        manuscript_menu.addSeparator()
+
+        # Go to Scene
+        goto_scene_action = QAction("&Go to Scene...", self)
+        goto_scene_action.setShortcut(QKeySequence("Ctrl+G"))
+        goto_scene_action.setStatusTip("Quick navigation to any scene")
+        goto_scene_action.triggered.connect(self.go_to_scene_requested.emit)
+        manuscript_menu.addAction(goto_scene_action)
+        self.goto_scene_action = goto_scene_action
 
     def _create_view_menu(self):
         """Create View menu"""
@@ -252,6 +360,20 @@ class MenuBar(QMenuBar):
 
         help_menu.addSeparator()
 
+        # View Error Log
+        log_action = QAction("View Error &Log", self)
+        log_action.setStatusTip("View application error log")
+        log_action.triggered.connect(self.view_error_log_requested.emit)
+        help_menu.addAction(log_action)
+
+        # Report Issue
+        report_action = QAction("&Report Issue", self)
+        report_action.setStatusTip("Report a bug or issue")
+        report_action.triggered.connect(self.report_issue_requested.emit)
+        help_menu.addAction(report_action)
+
+        help_menu.addSeparator()
+
         # About
         about_action = QAction("&About The Novelist", self)
         about_action.triggered.connect(self.about_requested.emit)
@@ -267,6 +389,15 @@ class MenuBar(QMenuBar):
         self.save_action.setEnabled(is_open)
         self.save_as_action.setEnabled(is_open)
         self.close_action.setEnabled(is_open)
+        self.backup_action.setEnabled(is_open)
+        # Restore action is always enabled (can restore without open project)
+        self.add_chapter_action.setEnabled(is_open)
+        self.add_scene_action.setEnabled(is_open)
+        self.rename_action.setEnabled(is_open)
+        self.delete_action.setEnabled(is_open)
+        self.prev_scene_action.setEnabled(is_open)
+        self.next_scene_action.setEnabled(is_open)
+        self.goto_scene_action.setEnabled(is_open)
         self.grammar_action.setEnabled(is_open)
         self.repetitions_action.setEnabled(is_open)
         self.style_action.setEnabled(is_open)
