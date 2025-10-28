@@ -148,22 +148,12 @@ class ProjectManager:
             # Clean up temp directory
             shutil.rmtree(temp_dir)
 
-            # Set current project
-            self.current_project = project
-            self.current_filepath = filepath
-            self.character_manager = CharacterManager()
-            self.manuscript_structure_manager = ManuscriptStructureManager(default_structure)
+            # Open the newly created project to initialize all managers
+            project_data, manuscript_text, characters = self.open_project(filepath)
 
-            # Initialize container managers (will be properly set when opening)
-            self.container_manager = None
-            self.location_manager = None
-            self.research_manager = None
-            self.timeline_manager = None
-            self.source_manager = None
-            self.note_manager = None
-
-            # Set NLP language for new project
-            self._set_nlp_language(project.language)
+            if project_data is None:
+                AppLogger.error(f"Failed to open newly created project: {filepath}")
+                return False
 
             AppLogger.info(f"New project created: {project.title} (type: {project_type.value}, language: {project.language})")
             return True
