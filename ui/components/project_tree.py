@@ -8,6 +8,7 @@ from typing import List, Optional
 from models.character import Character
 from models.manuscript_structure import ManuscriptStructure
 from models.project import Project
+from models.container_type import ContainerType
 from datetime import datetime
 
 
@@ -26,6 +27,15 @@ class ProjectTree(QTreeWidget):
     character_selected = Signal(str)  # character_id
     statistics_selected = Signal()
 
+    # Dynamic container signals
+    locations_selected = Signal()
+    research_selected = Signal()
+    timeline_selected = Signal()
+    worldbuilding_selected = Signal()
+    sources_selected = Signal()
+    keywords_selected = Signal()
+    notes_selected = Signal()
+
     # Manuscript structure operations
     add_chapter_requested = Signal()
     add_scene_requested = Signal(str)  # chapter_id
@@ -37,6 +47,15 @@ class ProjectTree(QTreeWidget):
     # Character operations
     add_character_requested = Signal()
     delete_character_requested = Signal(str)  # character_id
+
+    # Dynamic container operations
+    add_location_requested = Signal()
+    add_research_note_requested = Signal()
+    add_timeline_event_requested = Signal()
+    add_worldbuilding_entry_requested = Signal()
+    add_source_requested = Signal()
+    add_keyword_requested = Signal()
+    add_note_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -179,6 +198,23 @@ class ProjectTree(QTreeWidget):
         statistics_item.setText(0, "📊 Statistics")
         statistics_item.setData(0, Qt.ItemDataRole.UserRole, "statistics")
 
+        # Dynamic containers based on project type
+        available_containers = ContainerType.get_available_for_project_type(project.project_type)
+
+        for container_type in available_containers:
+            # Skip manuscript and characters (already added above)
+            if container_type in [ContainerType.MANUSCRIPT, ContainerType.CHARACTERS]:
+                continue
+
+            # Get display info for this container
+            icon, name = ContainerType.get_display_info(container_type, 'it')
+
+            # Create tree item
+            container_item = QTreeWidgetItem(root)
+            container_item.setText(0, f"{icon} {name}")
+            container_item.setData(0, Qt.ItemDataRole.UserRole, container_type.value)
+            container_item.setExpanded(False)
+
     def update_characters(self, characters: List[Character]):
         """
         Update the characters list in the tree
@@ -241,6 +277,21 @@ class ProjectTree(QTreeWidget):
         elif isinstance(item_type, str) and item_type.startswith("character:"):
             character_id = item_type.split(":", 1)[1]
             self.character_selected.emit(character_id)
+        # Dynamic containers
+        elif item_type == ContainerType.LOCATIONS.value:
+            self.locations_selected.emit()
+        elif item_type == ContainerType.RESEARCH.value:
+            self.research_selected.emit()
+        elif item_type == ContainerType.TIMELINE.value:
+            self.timeline_selected.emit()
+        elif item_type == ContainerType.WORLDBUILDING.value:
+            self.worldbuilding_selected.emit()
+        elif item_type == ContainerType.SOURCES.value:
+            self.sources_selected.emit()
+        elif item_type == ContainerType.KEYWORDS.value:
+            self.keywords_selected.emit()
+        elif item_type == ContainerType.NOTES.value:
+            self.notes_selected.emit()
 
     def _show_context_menu(self, position):
         """
@@ -318,6 +369,42 @@ class ProjectTree(QTreeWidget):
                 lambda: self.delete_character_requested.emit(character_id)
             )
             menu.addAction(delete_action)
+
+        # Dynamic container context menus
+        elif item_type == ContainerType.LOCATIONS.value:
+            add_action = QAction("Add New Location", self)
+            add_action.triggered.connect(self.add_location_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.RESEARCH.value:
+            add_action = QAction("Add New Research Note", self)
+            add_action.triggered.connect(self.add_research_note_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.TIMELINE.value:
+            add_action = QAction("Add New Timeline Event", self)
+            add_action.triggered.connect(self.add_timeline_event_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.WORLDBUILDING.value:
+            add_action = QAction("Add New Worldbuilding Entry", self)
+            add_action.triggered.connect(self.add_worldbuilding_entry_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.SOURCES.value:
+            add_action = QAction("Add New Source", self)
+            add_action.triggered.connect(self.add_source_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.KEYWORDS.value:
+            add_action = QAction("Add New Keyword", self)
+            add_action.triggered.connect(self.add_keyword_requested.emit)
+            menu.addAction(add_action)
+
+        elif item_type == ContainerType.NOTES.value:
+            add_action = QAction("Add New Note", self)
+            add_action.triggered.connect(self.add_note_requested.emit)
+            menu.addAction(add_action)
 
         if not menu.isEmpty():
             menu.exec(self.viewport().mapToGlobal(position))
