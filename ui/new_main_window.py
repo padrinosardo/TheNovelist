@@ -2000,9 +2000,8 @@ class TheNovelistMainWindow(QMainWindow):
         if not self.auto_save_enabled:
             return
 
-        # Save project
-        manuscript_text = self.manuscript_view.get_text()
-        success = self.project_manager.save_project(manuscript_text)
+        # Save project (manuscript is saved automatically via manuscript_structure_manager)
+        success = self.project_manager.save_project()
 
         if success:
             from datetime import datetime

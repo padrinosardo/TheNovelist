@@ -4,7 +4,7 @@ Note Detail Dialog - Edit/create generic notes
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel,
     QLineEdit, QTextEdit, QComboBox, QPushButton, QCheckBox,
-    QMessageBox, QScrollArea, QFrame, QGroupBox
+    QMessageBox, QScrollArea, QFrame, QGroupBox, QWidget
 )
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont, QColor
