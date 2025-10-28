@@ -306,6 +306,15 @@ class SourcesListView(QWidget):
         # APA Format
         apa_text = QTextEdit()
         apa_text.setReadOnly(True)
+        apa_text.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 10px;
+            }
+        """)
         apa_bibliography = "\n\n".join([source.generate_apa_citation() for source in sorted(self._sources, key=lambda s: s.author or s.title)])
         apa_text.setPlainText(apa_bibliography)
         tabs.addTab(apa_text, "APA Format")
@@ -313,6 +322,15 @@ class SourcesListView(QWidget):
         # MLA Format
         mla_text = QTextEdit()
         mla_text.setReadOnly(True)
+        mla_text.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 10px;
+            }
+        """)
         mla_bibliography = "\n\n".join([source.generate_mla_citation() for source in sorted(self._sources, key=lambda s: s.author or s.title)])
         mla_text.setPlainText(mla_bibliography)
         tabs.addTab(mla_text, "MLA Format")
@@ -320,6 +338,15 @@ class SourcesListView(QWidget):
         # BibTeX Format
         bibtex_text = QTextEdit()
         bibtex_text.setReadOnly(True)
+        bibtex_text.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 10px;
+            }
+        """)
         bibtex_bibliography = "\n\n".join([source.generate_bibtex_citation() for source in self._sources])
         bibtex_text.setPlainText(bibtex_bibliography)
         tabs.addTab(bibtex_text, "BibTeX Format")

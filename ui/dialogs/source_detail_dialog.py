@@ -114,6 +114,15 @@ class SourceDetailDialog(QDialog):
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("Additional notes about this source...")
         self.notes_input.setMaximumHeight(100)
+        self.notes_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         scroll_layout.addWidget(self.notes_input)
 
         # === CITATION PREVIEW ===
@@ -127,6 +136,7 @@ class SourceDetailDialog(QDialog):
         self.preview_text.setStyleSheet("""
             QTextEdit {
                 background-color: #f5f5f5;
+                color: #333;
                 border: 1px solid #ccc;
                 border-radius: 5px;
                 padding: 10px;

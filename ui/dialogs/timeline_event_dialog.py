@@ -74,6 +74,15 @@ class TimelineEventDialog(QDialog):
         self.description_input = QTextEdit()
         self.description_input.setPlaceholderText("Describe what happens in this event...")
         self.description_input.setMaximumHeight(150)
+        self.description_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         scroll_layout.addWidget(self.description_input)
 
         # === CHARACTERS SECTION ===
@@ -126,6 +135,15 @@ class TimelineEventDialog(QDialog):
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("Additional notes...")
         self.notes_input.setMaximumHeight(100)
+        self.notes_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         scroll_layout.addWidget(self.notes_input)
 
         scroll_layout.addStretch()

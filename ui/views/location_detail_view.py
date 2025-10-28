@@ -81,6 +81,15 @@ class LocationDetailView(QWidget):
         self.description_input = QTextEdit()
         self.description_input.setPlaceholderText("Describe this location...")
         self.description_input.setMaximumHeight(150)
+        self.description_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         layout.addWidget(self.description_input)
 
         # === IMAGES SECTION ===
@@ -146,6 +155,15 @@ class LocationDetailView(QWidget):
         self.notes_input = QTextEdit()
         self.notes_input.setPlaceholderText("Additional notes about this location...")
         self.notes_input.setMaximumHeight(100)
+        self.notes_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         layout.addWidget(self.notes_input)
 
         # Add stretch

@@ -101,6 +101,15 @@ class NoteDetailDialog(QDialog):
         self.content_input = QTextEdit()
         self.content_input.setPlaceholderText("Write your note here...")
         self.content_input.setMinimumHeight(200)
+        self.content_input.setStyleSheet("""
+            QTextEdit {
+                background-color: white;
+                color: #333;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                padding: 5px;
+            }
+        """)
         scroll_layout.addWidget(self.content_input)
 
         # === TAGS ===
