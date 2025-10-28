@@ -296,83 +296,16 @@ class TheNovelistMainWindow(QMainWindow):
         if not self._check_unsaved_changes():
             return
 
-        # Get project details from user
+        # Show new project dialog
+        from ui.dialogs.new_project_dialog import NewProjectDialog
         from utils.validators import Validators
 
-        # Get and validate project title
-        while True:
-            title, ok = QInputDialog.getText(
-                self,
-                "New Project",
-                "Project Title:"
-            )
-
-            if not ok:
-                return
-
-            # Validate title
-            is_valid, error_msg = Validators.validate_project_name(title)
-            if not is_valid:
-                QMessageBox.warning(self, "Invalid Project Name", error_msg)
-                continue
-            break
-
-        # Get and validate author name
-        while True:
-            author, ok = QInputDialog.getText(
-                self,
-                "New Project",
-                "Author Name:"
-            )
-
-            if not ok:
-                return
-
-            if not author.strip():
-                author = "Unknown"
-                break
-
-            # Validate author name
-            is_valid, error_msg = Validators.validate_text_input(
-                author,
-                min_length=1,
-                max_length=100,
-                field_name="Author name"
-            )
-            if not is_valid:
-                QMessageBox.warning(self, "Invalid Author Name", error_msg)
-                continue
-            break
-
-        # Get project language
-        language_options = [
-            "🇮🇹 Italiano (it)",
-            "🇬🇧 English (en)",
-            "🇪🇸 Español (es)",
-            "🇫🇷 Français (fr)",
-            "🇩🇪 Deutsch (de)"
-        ]
-        language_map = {
-            "🇮🇹 Italiano (it)": "it",
-            "🇬🇧 English (en)": "en",
-            "🇪🇸 Español (es)": "es",
-            "🇫🇷 Français (fr)": "fr",
-            "🇩🇪 Deutsch (de)": "de"
-        }
-
-        language_choice, ok = QInputDialog.getItem(
-            self,
-            "Project Language",
-            "Select the project language:\n(This will be used for grammar and style analysis)",
-            language_options,
-            0,  # Default to Italian
-            False  # Not editable
-        )
-
-        if not ok:
+        dialog = NewProjectDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
-        language = language_map[language_choice]
+        # Get project data from dialog
+        title, author, language, project_type, genre, target_word_count, tags = dialog.get_project_data()
 
         # Get save location
         filepath, _ = QFileDialog.getSaveFileName(
@@ -394,8 +327,17 @@ class TheNovelistMainWindow(QMainWindow):
             QMessageBox.critical(self, "Invalid Save Location", error_msg)
             return
 
-        # Create project with language
-        success = self.project_manager.create_new_project(title, author, filepath, language)
+        # Create project with all metadata
+        success = self.project_manager.create_new_project(
+            title=title,
+            author=author,
+            filepath=filepath,
+            language=language,
+            project_type=project_type,
+            genre=genre,
+            target_word_count=target_word_count,
+            tags=tags
+        )
 
         if success:
             # Setup images directory for character manager
