@@ -74,6 +74,7 @@ class TimelineView(QWidget):
                 border-left: 4px solid #2196F3;
                 margin: 3px;
                 border-radius: 3px;
+                color: #333;
             }
             QListWidget::item:selected {
                 background-color: #2196F3;
@@ -82,6 +83,7 @@ class TimelineView(QWidget):
             }
             QListWidget::item:hover {
                 background-color: #e3f2fd;
+                color: #333;
             }
         """)
         layout.addWidget(self.timeline_list)

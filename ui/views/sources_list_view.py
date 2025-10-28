@@ -80,6 +80,7 @@ class SourcesListView(QWidget):
             QListWidget::item {
                 padding: 10px;
                 border-radius: 3px;
+                color: #333;
             }
             QListWidget::item:selected {
                 background-color: #2196F3;
@@ -87,6 +88,7 @@ class SourcesListView(QWidget):
             }
             QListWidget::item:hover {
                 background-color: #e3f2fd;
+                color: #333;
             }
         """)
         layout.addWidget(self.sources_list)

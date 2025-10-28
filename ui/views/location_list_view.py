@@ -70,6 +70,7 @@ class LocationListView(QWidget):
             QListWidget::item {
                 padding: 8px;
                 border-radius: 3px;
+                color: #333;
             }
             QListWidget::item:selected {
                 background-color: #2196F3;
@@ -77,6 +78,7 @@ class LocationListView(QWidget):
             }
             QListWidget::item:hover {
                 background-color: #e3f2fd;
+                color: #333;
             }
         """)
         layout.addWidget(self.location_list)
