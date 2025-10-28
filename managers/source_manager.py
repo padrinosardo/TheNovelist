@@ -62,6 +62,20 @@ class SourceManager:
         logger.info(f"Created source: {title} (ID: {source_id})")
         return source_id
 
+    def add_source_object(self, source: Source) -> str:
+        """
+        Add a source object directly.
+
+        Args:
+            source: Source object to add
+
+        Returns:
+            str: ID of the created source
+        """
+        source_id = self.container_manager.add_item(self.container_type, source)
+        logger.info(f"Created source: {source.title} (ID: {source_id})")
+        return source_id
+
     def get_source(self, source_id: str) -> Optional[Source]:
         """
         Get a source by ID.

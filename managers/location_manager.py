@@ -61,6 +61,20 @@ class LocationManager:
         logger.info(f"Created location: {name} (ID: {location_id})")
         return location_id
 
+    def add_location_object(self, location: Location) -> str:
+        """
+        Add a location object directly.
+
+        Args:
+            location: Location object to add
+
+        Returns:
+            str: ID of the created location
+        """
+        location_id = self.container_manager.add_item(self.container_type, location)
+        logger.info(f"Created location: {location.name} (ID: {location_id})")
+        return location_id
+
     def get_location(self, location_id: str) -> Optional[Location]:
         """
         Get a location by ID.

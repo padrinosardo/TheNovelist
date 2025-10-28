@@ -52,6 +52,20 @@ class ResearchManager:
         logger.info(f"Created research note: {title} (ID: {note_id})")
         return note_id
 
+    def add_research_note_object(self, note: ResearchNote) -> str:
+        """
+        Add a research note object directly.
+
+        Args:
+            note: ResearchNote object to add
+
+        Returns:
+            str: ID of the created research note
+        """
+        note_id = self.container_manager.add_item(self.container_type, note)
+        logger.info(f"Created research note: {note.title} (ID: {note_id})")
+        return note_id
+
     def get_research_note(self, note_id: str) -> Optional[ResearchNote]:
         """
         Get a research note by ID.

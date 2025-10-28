@@ -55,6 +55,20 @@ class TimelineManager:
         logger.info(f"Created timeline event: {title} (ID: {event_id})")
         return event_id
 
+    def add_timeline_event_object(self, event: TimelineEvent) -> str:
+        """
+        Add a timeline event object directly.
+
+        Args:
+            event: TimelineEvent object to add
+
+        Returns:
+            str: ID of the created timeline event
+        """
+        event_id = self.container_manager.add_item(self.container_type, event)
+        logger.info(f"Created timeline event: {event.title} (ID: {event_id})")
+        return event_id
+
     def get_timeline_event(self, event_id: str) -> Optional[TimelineEvent]:
         """
         Get a timeline event by ID.

@@ -54,6 +54,20 @@ class NoteManager:
         logger.info(f"Created note: {title} (ID: {note_id})")
         return note_id
 
+    def add_note_object(self, note: Note) -> str:
+        """
+        Add a note object directly.
+
+        Args:
+            note: Note object to add
+
+        Returns:
+            str: ID of the created note
+        """
+        note_id = self.container_manager.add_item(self.container_type, note)
+        logger.info(f"Created note: {note.title} (ID: {note_id})")
+        return note_id
+
     def get_note(self, note_id: str) -> Optional[Note]:
         """
         Get a note by ID.
