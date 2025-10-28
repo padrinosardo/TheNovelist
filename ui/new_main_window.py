@@ -284,6 +284,15 @@ class TheNovelistMainWindow(QMainWindow):
         self.notes_list_view.delete_note_requested.connect(self._delete_note)
         self.notes_list_view.toggle_pin_requested.connect(self._toggle_note_pin)
 
+    def _update_window_title(self):
+        """Update only the window title (for when content is modified)"""
+        if self.project_manager.has_project():
+            title = self.project_manager.get_project_title()
+            modified = " *" if self.is_modified else ""
+            self.setWindowTitle(f"The Novelist - {title}{modified}")
+        else:
+            self.setWindowTitle("The Novelist")
+
     def _update_ui_state(self):
         """Update UI based on project state"""
         has_project = self.project_manager.has_project()
@@ -292,12 +301,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.set_project_open(has_project)
 
         # Update window title
-        if has_project:
-            title = self.project_manager.get_project_title()
-            modified = " *" if self.is_modified else ""
-            self.setWindowTitle(f"The Novelist - {title}{modified}")
-        else:
-            self.setWindowTitle("The Novelist")
+        self._update_window_title()
 
         # Update project tree
         if has_project:
@@ -915,7 +919,7 @@ class TheNovelistMainWindow(QMainWindow):
         )
 
         self.is_modified = True
-        self._update_ui_state()
+        self._update_window_title()
 
     def _on_character_deleted(self, character_id: str):
         """Handle character deletion from detail view"""
@@ -1677,7 +1681,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.location_manager.add_location_object(location)
 
         self.is_modified = True
-        self._update_ui_state()
+        self._update_window_title()
         self._show_locations()
         self.statusBar().showMessage(f"Location saved: {location.name}", 3000)
 
@@ -1687,7 +1691,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_locations()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self.statusBar().showMessage("Location deleted", 3000)
 
     def _show_research(self):
@@ -1742,7 +1746,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.research_manager.add_research_note_object(note)
 
         self.is_modified = True
-        self._update_ui_state()
+        self._update_window_title()
         self._show_research()
         self.statusBar().showMessage(f"Research note saved: {note.title}", 3000)
 
@@ -1752,7 +1756,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_research()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self.statusBar().showMessage("Research note deleted", 3000)
 
     def _show_timeline(self):
@@ -1784,7 +1788,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.timeline_manager.add_timeline_event_object(event)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_timeline()
             self.statusBar().showMessage(f"Timeline event added: {event.title}", 3000)
 
@@ -1808,7 +1812,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.timeline_manager.update_timeline_event(updated_event)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_timeline()
             self.statusBar().showMessage(f"Timeline event updated: {updated_event.title}", 3000)
 
@@ -1818,7 +1822,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_timeline()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self.statusBar().showMessage("Timeline event deleted", 3000)
 
     def _move_timeline_event_up(self, event_id: str):
@@ -1827,7 +1831,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_timeline()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
 
     def _move_timeline_event_down(self, event_id: str):
         """Move timeline event down"""
@@ -1835,7 +1839,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_timeline()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
 
     def _show_sources(self):
         """Show sources list view"""
@@ -1861,7 +1865,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.source_manager.add_source_object(source)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_sources()
             self.statusBar().showMessage(f"Source added: {source.title}", 3000)
 
@@ -1880,7 +1884,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.source_manager.update_source(updated_source)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_sources()
             self.statusBar().showMessage(f"Source updated: {updated_source.title}", 3000)
 
@@ -1890,7 +1894,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_sources()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self.statusBar().showMessage("Source deleted", 3000)
 
     def _show_notes(self):
@@ -1930,7 +1934,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.note_manager.add_note_object(note)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_notes()
             self.statusBar().showMessage(f"Note added: {note.title}", 3000)
 
@@ -1962,7 +1966,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.note_manager.update_note(updated_note)
 
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self._show_notes()
             self.statusBar().showMessage(f"Note updated: {updated_note.title}", 3000)
 
@@ -1972,7 +1976,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_notes()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
             self.statusBar().showMessage("Note deleted", 3000)
 
     def _toggle_note_pin(self, note_id: str):
@@ -1981,7 +1985,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             self._show_notes()
             self.is_modified = True
-            self._update_ui_state()
+            self._update_window_title()
 
     # ==================== Auto-save ====================
 
