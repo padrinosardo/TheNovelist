@@ -121,6 +121,12 @@ class TheNovelistMainWindow(QMainWindow):
         self.progress.setStyleSheet(Stili.progress_bar())
         self.statusBar().addPermanentWidget(self.progress)
 
+        # Language indicator
+        self.language_label = QLabel()
+        self.language_label.setStyleSheet("color: #666; font-size: 11px; margin-right: 10px; padding: 2px 6px; background-color: #f0f0f0; border-radius: 3px;")
+        self.language_label.setVisible(False)
+        self.statusBar().addPermanentWidget(self.language_label)
+
         # Auto-save indicator
         self.auto_save_label = QLabel()
         self.auto_save_label.setStyleSheet("color: #666; font-size: 11px; margin-right: 10px;")
@@ -231,7 +237,7 @@ class TheNovelistMainWindow(QMainWindow):
         if has_project:
             manuscript_structure = self.project_manager.manuscript_structure_manager.get_structure()
             self.project_tree.load_project(
-                self.project_manager.current_project.title,
+                self.project_manager.current_project,
                 self.project_manager.character_manager.get_all_characters(),
                 manuscript_structure
             )
@@ -249,6 +255,38 @@ class TheNovelistMainWindow(QMainWindow):
                     self._on_scene_selected(first_scene.id)
         else:
             self.project_tree.clear_project()
+
+        # Update language indicator
+        self._update_language_indicator()
+
+    def _update_language_indicator(self):
+        """Update the language indicator in status bar"""
+        if self.project_manager.has_project():
+            language = self.project_manager.current_project.language
+            # Map language codes to display names with flags
+            language_names = {
+                'it': '🇮🇹 IT',
+                'en': '🇬🇧 EN',
+                'es': '🇪🇸 ES',
+                'fr': '🇫🇷 FR',
+                'de': '🇩🇪 DE'
+            }
+            display_name = language_names.get(language, language.upper())
+            self.language_label.setText(display_name)
+            self.language_label.setVisible(True)
+
+            # Update analyzers with project language
+            self._update_analyzers_language(language)
+        else:
+            self.language_label.setVisible(False)
+
+    def _update_analyzers_language(self, language: str):
+        """Update all analyzers to use the specified language"""
+        try:
+            self.grammar_analyzer.set_language(language)
+            self.style_analyzer.set_language(language)
+        except Exception as e:
+            print(f"Warning: Failed to update analyzer language: {e}")
 
     # ==================== Project Management ====================
 
@@ -306,6 +344,36 @@ class TheNovelistMainWindow(QMainWindow):
                 continue
             break
 
+        # Get project language
+        language_options = [
+            "🇮🇹 Italiano (it)",
+            "🇬🇧 English (en)",
+            "🇪🇸 Español (es)",
+            "🇫🇷 Français (fr)",
+            "🇩🇪 Deutsch (de)"
+        ]
+        language_map = {
+            "🇮🇹 Italiano (it)": "it",
+            "🇬🇧 English (en)": "en",
+            "🇪🇸 Español (es)": "es",
+            "🇫🇷 Français (fr)": "fr",
+            "🇩🇪 Deutsch (de)": "de"
+        }
+
+        language_choice, ok = QInputDialog.getItem(
+            self,
+            "Project Language",
+            "Select the project language:\n(This will be used for grammar and style analysis)",
+            language_options,
+            0,  # Default to Italian
+            False  # Not editable
+        )
+
+        if not ok:
+            return
+
+        language = language_map[language_choice]
+
         # Get save location
         filepath, _ = QFileDialog.getSaveFileName(
             self,
@@ -326,8 +394,8 @@ class TheNovelistMainWindow(QMainWindow):
             QMessageBox.critical(self, "Invalid Save Location", error_msg)
             return
 
-        # Create project
-        success = self.project_manager.create_new_project(title, author, filepath)
+        # Create project with language
+        success = self.project_manager.create_new_project(title, author, filepath, language)
 
         if success:
             # Setup images directory for character manager

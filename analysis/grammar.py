@@ -1,15 +1,41 @@
 """
-Module for grammatical text analysis - SIMPLE VERSION
+Module for grammatical text analysis - MULTI-LANGUAGE VERSION
 """
 from analysis.grammar_rules import SimpleGrammarChecker
+from analysis.nlp_manager import nlp_manager
+from utils.logger import AppLogger
+from typing import Optional
 
 
 class GrammarAnalyzer:
-    """Class to manage grammatical analysis"""
+    """Class to manage grammatical analysis with multi-language support"""
 
-    def __init__(self):
-        """Initialize the grammar analyzer"""
-        self.checker = SimpleGrammarChecker()
+    def __init__(self, language: str = 'it'):
+        """
+        Initialize the grammar analyzer
+
+        Args:
+            language: Language code ('it', 'en', 'es', 'fr', 'de')
+        """
+        self.language = language
+        self.checker = SimpleGrammarChecker()  # Fallback per italiano
+
+        # Imposta lingua nel manager
+        nlp_manager.set_language(language)
+
+        AppLogger.info(f"GrammarAnalyzer initialized for language: {language}")
+
+    def set_language(self, language: str):
+        """
+        Cambia la lingua di analisi
+
+        Args:
+            language: Nuovo codice lingua
+        """
+        if language != self.language:
+            AppLogger.info(f"Changing GrammarAnalyzer language: {self.language} -> {language}")
+            self.language = language
+            nlp_manager.set_language(language)
 
     def analyze(self, text, max_errors=30):
         """
@@ -23,25 +49,79 @@ class GrammarAnalyzer:
             dict: Dictionary with 'errors' and 'total_errors'
         """
         try:
-            errors = self.checker.check(text)
+            # Se italiano, usa SimpleGrammarChecker (regole custom)
+            if self.language == 'it':
+                errors = self.checker.check(text)
 
-            # Group by category
-            by_category = {}
-            for error in errors:
-                cat = error['category']
-                by_category[cat] = by_category.get(cat, 0) + 1
+                # Group by category
+                by_category = {}
+                for error in errors:
+                    cat = error['category']
+                    by_category[cat] = by_category.get(cat, 0) + 1
 
-            return {
-                'errors': errors[:max_errors],
-                'total_errors': len(errors),
-                'by_category': by_category,
-                'success': True
-            }
+                return {
+                    'errors': errors[:max_errors],
+                    'total_errors': len(errors),
+                    'by_category': by_category,
+                    'language': self.language,
+                    'success': True
+                }
+
+            # Per altre lingue, usa LanguageTool
+            else:
+                return self._analyze_with_languagetool(text, max_errors)
+
         except Exception as e:
+            AppLogger.error(f"Error in GrammarAnalyzer.analyze: {e}")
             return {
                 'error': str(e),
                 'success': False
             }
+
+    def _analyze_with_languagetool(self, text: str, max_errors: int):
+        """
+        Analizza usando LanguageTool (per lingue diverse dall'italiano)
+
+        Args:
+            text: Testo da analizzare
+            max_errors: Numero massimo errori da ritornare
+
+        Returns:
+            dict: Risultati analisi
+        """
+        tool = nlp_manager.get_language_tool(self.language)
+
+        if tool is None:
+            return {
+                'error': f'LanguageTool not available for language: {self.language}',
+                'success': False
+            }
+
+        matches = tool.check(text)
+
+        errors = []
+        by_category = {}
+
+        for match in matches:
+            category = match.category or 'other'
+            by_category[category] = by_category.get(category, 0) + 1
+
+            errors.append({
+                'message': match.message,
+                'original': text[match.offset:match.offset + match.errorLength],
+                'suggestion': match.replacements[0] if match.replacements else '',
+                'context': match.context,
+                'category': category,
+                'rule_id': match.ruleId
+            })
+
+        return {
+            'errors': errors[:max_errors],
+            'total_errors': len(errors),
+            'by_category': by_category,
+            'language': self.language,
+            'success': True
+        }
 
     def format_results(self, result, max_displayed=15):
         """

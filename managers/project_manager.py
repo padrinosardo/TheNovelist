@@ -38,7 +38,7 @@ class ProjectManager:
         self.manuscript_structure_manager = ManuscriptStructureManager()
         self._temp_dir: Optional[str] = None
 
-    def create_new_project(self, title: str, author: str, filepath: str) -> bool:
+    def create_new_project(self, title: str, author: str, filepath: str, language: str = 'it') -> bool:
         """
         Create a new project and save it as a ZIP file
 
@@ -46,6 +46,7 @@ class ProjectManager:
             title: Project title
             author: Author name
             filepath: Path where to save the .tnp file
+            language: Project language code ('it', 'en', 'es', 'fr', 'de')
 
         Returns:
             bool: True if successful, False otherwise
@@ -55,8 +56,8 @@ class ProjectManager:
             if not filepath.endswith('.tnp'):
                 filepath += '.tnp'
 
-            # Create project instance
-            project = Project.create_new(title, author)
+            # Create project instance with language
+            project = Project.create_new(title, author, language)
 
             # Create temporary directory for project structure
             temp_dir = tempfile.mkdtemp()
@@ -100,6 +101,10 @@ class ProjectManager:
             self.character_manager = CharacterManager()
             self.manuscript_structure_manager = ManuscriptStructureManager(default_structure)
 
+            # Set NLP language for new project
+            self._set_nlp_language(project.language)
+
+            AppLogger.info(f"New project created: {project.title} (language: {project.language})")
             return True
 
         except Exception as e:
@@ -177,6 +182,14 @@ class ProjectManager:
 
                 AppLogger.debug("Manifest validation passed")
 
+                # Migrate old project format if needed
+                manifest_data, migrations_applied = self._migrate_old_project(manifest_data)
+                if migrations_applied:
+                    # Save migrated manifest back to temp directory
+                    with open(manifest_path, 'w', encoding='utf-8') as f:
+                        json.dump(manifest_data, f, indent=2)
+                    AppLogger.info(f"Applied {len(migrations_applied)} migrations to project")
+
             except json.JSONDecodeError as e:
                 AppLogger.error(f"Invalid JSON in manifest.json: {e}")
                 raise ValueError(f"Project manifest is corrupted (invalid JSON)")
@@ -248,7 +261,10 @@ class ProjectManager:
             self.current_project = project
             self.current_filepath = filepath
 
-            AppLogger.info(f"Project opened successfully: {project.title}")
+            # Set NLP language for opened project
+            self._set_nlp_language(project.language)
+
+            AppLogger.info(f"Project opened successfully: {project.title} (language: {project.language})")
             characters = self.character_manager.get_all_characters()
             return project, manuscript_text, characters
 
@@ -326,6 +342,47 @@ class ProjectManager:
 
         AppLogger.info(f"Migrated manuscript: {scene.word_count} words in Chapter 1 > Scene 1")
         return structure
+
+    def _migrate_old_project(self, manifest_data: dict) -> Tuple[dict, List[str]]:
+        """
+        Migrate old project format to support new features (language, etc.)
+
+        Args:
+            manifest_data: The manifest dictionary
+
+        Returns:
+            Tuple: (updated manifest_data, list of migrations applied)
+        """
+        migrations_applied = []
+
+        # Migration 1: Add language field if missing
+        if 'language' not in manifest_data:
+            manifest_data['language'] = 'it'  # Default to Italian
+            migrations_applied.append("Added default language: Italian (it)")
+            AppLogger.info("Migration applied: Added language field with default 'it'")
+
+        # Future migrations can be added here
+        # Example:
+        # if 'project_type' not in manifest_data:
+        #     manifest_data['project_type'] = 'novel'
+        #     migrations_applied.append("Added default project type: Novel")
+
+        return manifest_data, migrations_applied
+
+    def _set_nlp_language(self, language: str):
+        """
+        Set the NLP language in the nlp_manager
+
+        Args:
+            language: Language code to set
+        """
+        try:
+            from analysis.nlp_manager import nlp_manager
+            nlp_manager.set_language(language)
+            AppLogger.info(f"NLP language set to: {language}")
+        except Exception as e:
+            AppLogger.warning(f"Failed to set NLP language: {e}")
+            # Non-fatal error, continue anyway
 
     def save_project(self) -> bool:
         """

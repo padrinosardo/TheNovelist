@@ -1,46 +1,53 @@
 """
-Module for writing style analysis
+Module for writing style analysis - MULTI-LANGUAGE VERSION
 """
-import spacy
 import textstat
 from collections import Counter
+from typing import Optional
+from analysis.nlp_manager import nlp_manager
+from utils.logger import AppLogger
 
 
 class StyleAnalyzer:
-    """Class to analyze writing style"""
+    """Class to analyze writing style with multi-language support"""
 
-    # Part of speech mapping in English
+    # Part of speech mapping (localized for multiple languages)
     POS_MAPPING = {
-        'NOUN': 'Nouns',
-        'VERB': 'Verbs',
-        'ADJ': 'Adjectives',
-        'ADV': 'Adverbs',
-        'PRON': 'Pronouns',
-        'DET': 'Determiners',
-        'ADP': 'Adpositions',
-        'CONJ': 'Conjunctions'
+        'NOUN': {'it': 'Sostantivi', 'en': 'Nouns', 'es': 'Sustantivos', 'fr': 'Noms', 'de': 'Substantive'},
+        'VERB': {'it': 'Verbi', 'en': 'Verbs', 'es': 'Verbos', 'fr': 'Verbes', 'de': 'Verben'},
+        'ADJ': {'it': 'Aggettivi', 'en': 'Adjectives', 'es': 'Adjetivos', 'fr': 'Adjectifs', 'de': 'Adjektive'},
+        'ADV': {'it': 'Avverbi', 'en': 'Adverbs', 'es': 'Adverbios', 'fr': 'Adverbes', 'de': 'Adverbien'},
+        'PRON': {'it': 'Pronomi', 'en': 'Pronouns', 'es': 'Pronombres', 'fr': 'Pronoms', 'de': 'Pronomen'},
+        'DET': {'it': 'Determinanti', 'en': 'Determiners', 'es': 'Determinantes', 'fr': 'Déterminants', 'de': 'Artikel'},
+        'ADP': {'it': 'Preposizioni', 'en': 'Adpositions', 'es': 'Adposiciones', 'fr': 'Adpositions', 'de': 'Präpositionen'},
+        'CONJ': {'it': 'Congiunzioni', 'en': 'Conjunctions', 'es': 'Conjunciones', 'fr': 'Conjonctions', 'de': 'Konjunktionen'}
     }
 
-    def __init__(self, model='it_core_news_sm', language='it'):
+    def __init__(self, language: str = 'it'):
         """
         Initialize the style analyzer
 
         Args:
-            model: spaCy model name
-            language: Language code for textstat
+            language: Language code ('it', 'en', 'es', 'fr', 'de')
         """
-        self.model = model
         self.language = language
-        self._nlp = None
 
-        # Configure textstat
-        textstat.set_lang(self.language)
+        # Imposta lingua nel manager
+        nlp_manager.set_language(language)
 
-    def _get_nlp(self):
-        """Lazy loading of spaCy model"""
-        if self._nlp is None:
-            self._nlp = spacy.load(self.model)
-        return self._nlp
+        AppLogger.info(f"StyleAnalyzer initialized for language: {language}")
+
+    def set_language(self, language: str):
+        """
+        Cambia la lingua di analisi
+
+        Args:
+            language: Nuovo codice lingua
+        """
+        if language != self.language:
+            AppLogger.info(f"Changing StyleAnalyzer language: {self.language} -> {language}")
+            self.language = language
+            nlp_manager.set_language(language)
 
     def analyze(self, text):
         """
@@ -53,7 +60,15 @@ class StyleAnalyzer:
             dict: Dictionary with style metrics
         """
         try:
-            nlp = self._get_nlp()
+            # Ottieni modello spaCy dal manager
+            nlp = nlp_manager.get_spacy_model(self.language)
+
+            if nlp is None:
+                return {
+                    'error': f'spaCy model not available for language: {self.language}',
+                    'success': False
+                }
+
             doc = nlp(text)
 
             # Basic statistics
@@ -69,8 +84,11 @@ class StyleAnalyzer:
             avg_sentence_length = num_words / num_sentences if num_sentences > 0 else 0
             diversity = num_unique_words / num_words if num_words > 0 else 0
 
-            # Readability index
-            readability = textstat.gulpease_index(text)
+            # Readability index (usa metodo appropriato per la lingua)
+            if self.language == 'it':
+                readability = textstat.gulpease_index(text)
+            else:
+                readability = textstat.flesch_reading_ease(text)
 
             # Part of speech analysis
             pos_counts = Counter([token.pos_ for token in doc if not token.is_punct])
@@ -83,9 +101,11 @@ class StyleAnalyzer:
                 'lexical_diversity': round(diversity * 100, 1),
                 'readability': round(readability, 1),
                 'pos_counts': dict(pos_counts.most_common(5)),
+                'language': self.language,
                 'success': True
             }
         except Exception as e:
+            AppLogger.error(f"Error in StyleAnalyzer.analyze: {e}")
             return {
                 'error': str(e),
                 'success': False
@@ -128,8 +148,11 @@ class StyleAnalyzer:
 
         # Text composition
         output += "\n📝 COMPOSITION\n\n"
+        lang = result.get('language', self.language)
         for pos, count in result['pos_counts'].items():
-            name = self.POS_MAPPING.get(pos, pos)
+            # Usa mapping localizzato
+            translations = self.POS_MAPPING.get(pos, {})
+            name = translations.get(lang, pos) if isinstance(translations, dict) else pos
             output += f"  • {name}: {count}\n"
 
         return output

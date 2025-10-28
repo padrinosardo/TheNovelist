@@ -7,6 +7,8 @@ from PySide6.QtGui import QAction
 from typing import List, Optional
 from models.character import Character
 from models.manuscript_structure import ManuscriptStructure
+from models.project import Project
+from datetime import datetime
 
 
 class ProjectTree(QTreeWidget):
@@ -16,6 +18,7 @@ class ProjectTree(QTreeWidget):
     """
 
     # Signals
+    project_info_selected = Signal()  # NEW: Project info clicked
     manuscript_selected = Signal()
     chapter_selected = Signal(str)  # chapter_id
     scene_selected = Signal(str)  # scene_id
@@ -58,9 +61,11 @@ class ProjectTree(QTreeWidget):
                 background-color: #f5f5f5;
                 border: none;
                 font-size: 13px;
+                color: #212121;
             }
             QTreeWidget::item {
                 padding: 5px;
+                color: #212121;
             }
             QTreeWidget::item:selected {
                 background-color: #2196F3;
@@ -68,16 +73,17 @@ class ProjectTree(QTreeWidget):
             }
             QTreeWidget::item:hover {
                 background-color: #e3f2fd;
+                color: #212121;
             }
         """)
 
-    def load_project(self, project_title: str, characters: List[Character],
+    def load_project(self, project: Project, characters: List[Character],
                      manuscript_structure: ManuscriptStructure = None):
         """
         Load project data into tree
 
         Args:
-            project_title: Title of the project
+            project: Project object with all metadata
             characters: List of characters
             manuscript_structure: Manuscript structure with chapters and scenes
         """
@@ -87,9 +93,54 @@ class ProjectTree(QTreeWidget):
 
         # Root node - Project title
         root = QTreeWidgetItem(self)
-        root.setText(0, f"📁 {project_title}")
+        root.setText(0, f"📁 {project.title}")
         root.setExpanded(True)
         root.setData(0, Qt.ItemDataRole.UserRole, "root")
+
+        # Project Info node - NEW!
+        info_item = QTreeWidgetItem(root)
+        info_item.setText(0, "📋 Project Info")
+        info_item.setExpanded(True)
+        info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info")
+
+        # Author
+        author_item = QTreeWidgetItem(info_item)
+        author_item.setText(0, f"  ✍️  Author: {project.author}")
+        author_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
+        author_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
+
+        # Language
+        language_names = {
+            'it': 'Italiano (IT)',
+            'en': 'English (EN)',
+            'es': 'Español (ES)',
+            'fr': 'Français (FR)',
+            'de': 'Deutsch (DE)'
+        }
+        language_display = language_names.get(project.language, project.language.upper())
+        language_item = QTreeWidgetItem(info_item)
+        language_item.setText(0, f"  🌍 Language: {language_display}")
+        language_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
+        language_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
+
+        # Project Type (for now, default to "Novel" - will be implemented in Milestone 2)
+        type_item = QTreeWidgetItem(info_item)
+        type_display = getattr(project, 'project_type', 'Novel')  # Default if not exists yet
+        type_item.setText(0, f"  📚 Type: {type_display}")
+        type_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
+        type_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
+
+        # Created Date
+        try:
+            created_date = datetime.fromisoformat(project.created_date)
+            date_display = created_date.strftime("%b %d, %Y")
+        except:
+            date_display = project.created_date[:10] if len(project.created_date) >= 10 else project.created_date
+
+        date_item = QTreeWidgetItem(info_item)
+        date_item.setText(0, f"  📅 Created: {date_display}")
+        date_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
+        date_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
 
         # Manuscript node with hierarchy
         manuscript_item = QTreeWidgetItem(root)
@@ -173,7 +224,9 @@ class ProjectTree(QTreeWidget):
         """
         item_type = item.data(0, Qt.ItemDataRole.UserRole)
 
-        if item_type == "manuscript":
+        if item_type == "project_info":
+            self.project_info_selected.emit()
+        elif item_type == "manuscript":
             self.manuscript_selected.emit()
         elif isinstance(item_type, str) and item_type.startswith("chapter:"):
             chapter_id = item_type.split(":", 1)[1]

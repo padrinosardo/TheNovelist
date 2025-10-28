@@ -13,24 +13,27 @@ class Project:
     Attributes:
         title: Project title
         author: Author name
+        language: Project language code ('it', 'en', 'es', 'fr', 'de')
         created_date: ISO format creation date
         modified_date: ISO format last modification date
         manuscript_text: The main text content
     """
     title: str
     author: str
-    created_date: str
-    modified_date: str
+    language: str = "it"  # Default: Italian
+    created_date: str = ""
+    modified_date: str = ""
     manuscript_text: str = ""
 
     @classmethod
-    def create_new(cls, title: str, author: str) -> 'Project':
+    def create_new(cls, title: str, author: str, language: str = "it") -> 'Project':
         """
         Create a new project with current timestamps
 
         Args:
             title: Project title
             author: Author name
+            language: Project language code (default: 'it')
 
         Returns:
             Project: New Project instance
@@ -39,6 +42,7 @@ class Project:
         return cls(
             title=title,
             author=author,
+            language=language,
             created_date=now,
             modified_date=now,
             manuscript_text=""
@@ -58,6 +62,7 @@ class Project:
         return {
             'title': self.title,
             'author': self.author,
+            'language': self.language,
             'created_date': self.created_date,
             'modified_date': self.modified_date
         }
@@ -77,6 +82,7 @@ class Project:
         return cls(
             title=data.get('title', 'Untitled'),
             author=data.get('author', 'Unknown'),
+            language=data.get('language', 'it'),  # Default to Italian for backward compatibility
             created_date=data.get('created_date', datetime.now().isoformat()),
             modified_date=data.get('modified_date', datetime.now().isoformat()),
             manuscript_text=manuscript_text

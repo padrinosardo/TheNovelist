@@ -56,7 +56,8 @@ class SettingsManager:
             "auto_save_interval": 5,  # minutes
             "theme": "light",
             "window_geometry": None,
-            "last_directory": str(Path.home() / "Documents")
+            "last_directory": str(Path.home() / "Documents"),
+            "preferred_ui_language": "it"  # UI language (separate from project language)
         }
 
     def _save_settings(self, settings: dict = None):
@@ -189,3 +190,36 @@ class SettingsManager:
     def set_last_directory(self, directory: str):
         """Set last used directory"""
         self.set("last_directory", directory)
+
+    # ==================== Language ====================
+
+    def get_preferred_ui_language(self) -> str:
+        """
+        Get preferred UI language
+
+        Note: This is separate from project language.
+        - UI language: Controls interface text (future i18n)
+        - Project language: Controls NLP analysis for manuscript
+
+        Returns:
+            str: Language code ('it', 'en', 'es', 'fr', 'de')
+        """
+        return self.settings.get("preferred_ui_language", "it")
+
+    def set_preferred_ui_language(self, language: str):
+        """
+        Set preferred UI language
+
+        Args:
+            language: Language code ('it', 'en', 'es', 'fr', 'de')
+
+        Note: This setting is for future UI localization.
+        Currently, the UI is in Italian/English only.
+        """
+        # Validate language code
+        valid_languages = ['it', 'en', 'es', 'fr', 'de']
+        if language not in valid_languages:
+            print(f"Warning: Invalid language code '{language}'. Using 'it'.")
+            language = 'it'
+
+        self.set("preferred_ui_language", language)
