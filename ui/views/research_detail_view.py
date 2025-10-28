@@ -98,6 +98,10 @@ class ResearchDetailView(QWidget):
                 border-radius: 5px;
                 background-color: #f9f9f9;
             }
+            QListWidget::item {
+                color: #333;
+                padding: 5px;
+            }
         """)
         layout.addWidget(self.sources_list)
 
@@ -127,15 +131,6 @@ class ResearchDetailView(QWidget):
         tags_hint = QLabel("💡 Tip: Use tags to organize and find related research notes quickly")
         tags_hint.setStyleSheet("color: #666; font-style: italic; font-size: 11px;")
         layout.addWidget(tags_hint)
-
-        # === RELATED TO SECTION ===
-        related_label = QLabel("Related To:")
-        related_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
-        layout.addWidget(related_label)
-
-        self.related_input = QLineEdit()
-        self.related_input.setPlaceholderText("Optional: Scene ID, Character ID, etc.")
-        layout.addWidget(self.related_input)
 
         # Add stretch
         layout.addStretch()
@@ -228,9 +223,6 @@ class ResearchDetailView(QWidget):
         # Load tags
         self.tags_input.setText(", ".join(note.tags))
 
-        # Load related_to
-        self.related_input.setText(note.related_to)
-
     def clear_form(self):
         """Clear the form for new research note"""
         self._current_note = None
@@ -240,7 +232,6 @@ class ResearchDetailView(QWidget):
         self.category_combo.setCurrentIndex(0)
         self.sources_list.clear()
         self.tags_input.clear()
-        self.related_input.clear()
 
     def _add_new_category(self):
         """Add a new category"""
@@ -304,9 +295,6 @@ class ResearchDetailView(QWidget):
         tags_text = self.tags_input.text().strip()
         tags = [tag.strip() for tag in tags_text.split(",") if tag.strip()]
 
-        # Get related_to
-        related_to = self.related_input.text().strip()
-
         # Create/update research note
         if self._current_note:
             # Update existing
@@ -316,7 +304,6 @@ class ResearchDetailView(QWidget):
             note.category = category
             note.sources = sources
             note.tags = tags
-            note.related_to = related_to
         else:
             # Create new
             note = ResearchNote(
@@ -324,8 +311,7 @@ class ResearchDetailView(QWidget):
                 content=self.content_input.toPlainText(),
                 category=category,
                 sources=sources,
-                tags=tags,
-                related_to=related_to
+                tags=tags
             )
 
         # Emit save signal
