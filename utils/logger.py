@@ -167,3 +167,6 @@ class AppLogger:
 
 # Initialize logger on module import
 AppLogger.initialize()
+
+# Create module-level logger instance for convenience
+logger = AppLogger.get_logger()
