@@ -22,6 +22,13 @@ class WorkspaceContainer(QStackedWidget):
     VIEW_CHARACTER_DETAIL = "character_detail"
     VIEW_STATISTICS = "statistics"
 
+    # Dynamic container views
+    VIEW_LOCATIONS = "locations"
+    VIEW_RESEARCH = "research"
+    VIEW_TIMELINE = "timeline"
+    VIEW_SOURCES = "sources"
+    VIEW_NOTES = "notes"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._views = {}

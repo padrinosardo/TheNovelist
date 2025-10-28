@@ -9,6 +9,10 @@ from PySide6.QtGui import QCloseEvent
 from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            ManuscriptView, CharactersListView, CharacterDetailView,
                            StatisticsDashboard)
+from ui.views import (LocationListView, LocationDetailView, ResearchListView,
+                      ResearchDetailView, TimelineView, SourcesListView,
+                      NotesListView)
+from ui.dialogs import (TimelineEventDialog, SourceDetailDialog, NoteDetailDialog)
 from ui.styles import Stili
 from managers.project_manager import ProjectManager
 from workers.thread_analysis import AnalysisThread
@@ -98,10 +102,26 @@ class TheNovelistMainWindow(QMainWindow):
         )
         self.statistics_dashboard = StatisticsDashboard()
 
+        # Dynamic container views
+        self.location_list_view = LocationListView()
+        self.location_detail_view = LocationDetailView()
+        self.research_list_view = ResearchListView()
+        self.research_detail_view = ResearchDetailView()
+        self.timeline_view = TimelineView()
+        self.sources_list_view = SourcesListView()
+        self.notes_list_view = NotesListView()
+
         self.workspace.add_view(WorkspaceContainer.VIEW_MANUSCRIPT, self.manuscript_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTERS_LIST, self.characters_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTER_DETAIL, self.character_detail_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_STATISTICS, self.statistics_dashboard)
+
+        # Add dynamic container views
+        self.workspace.add_view(WorkspaceContainer.VIEW_LOCATIONS, self.location_list_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_RESEARCH, self.research_list_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_TIMELINE, self.timeline_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_SOURCES, self.sources_list_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_NOTES, self.notes_list_view)
 
         # Show manuscript by default
         self.workspace.show_manuscript()
@@ -186,6 +206,13 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.character_selected.connect(self._show_character_detail)
         self.project_tree.statistics_selected.connect(self._show_statistics)
 
+        # Dynamic container selection signals
+        self.project_tree.locations_selected.connect(self._show_locations)
+        self.project_tree.research_selected.connect(self._show_research)
+        self.project_tree.timeline_selected.connect(self._show_timeline)
+        self.project_tree.sources_selected.connect(self._show_sources)
+        self.project_tree.notes_selected.connect(self._show_notes)
+
         # Manuscript structure operations
         self.project_tree.add_chapter_requested.connect(self._add_chapter)
         self.project_tree.add_scene_requested.connect(self._add_scene)
@@ -197,6 +224,13 @@ class TheNovelistMainWindow(QMainWindow):
         # Character operations
         self.project_tree.add_character_requested.connect(self._add_character)
         self.project_tree.delete_character_requested.connect(self._delete_character)
+
+        # Dynamic container operations
+        self.project_tree.add_location_requested.connect(self._add_location)
+        self.project_tree.add_research_note_requested.connect(self._add_research_note)
+        self.project_tree.add_timeline_event_requested.connect(self._add_timeline_event)
+        self.project_tree.add_source_requested.connect(self._add_source)
+        self.project_tree.add_note_requested.connect(self._add_note)
 
         # Characters list view signals
         self.characters_list_view.character_clicked.connect(self._show_character_detail)
@@ -217,6 +251,38 @@ class TheNovelistMainWindow(QMainWindow):
         self.manuscript_view.scene_content_changed.connect(self._on_scene_content_changed)
         self.manuscript_view.previous_scene_requested.connect(self._go_to_previous_scene)
         self.manuscript_view.next_scene_requested.connect(self._go_to_next_scene)
+
+        # Location view signals
+        self.location_list_view.add_location_requested.connect(self._add_location)
+        self.location_list_view.edit_location_requested.connect(self._edit_location)
+        self.location_list_view.delete_location_requested.connect(self._delete_location)
+        self.location_detail_view.save_requested.connect(self._save_location)
+        self.location_detail_view.cancel_requested.connect(self._show_locations)
+
+        # Research view signals
+        self.research_list_view.add_research_requested.connect(self._add_research_note)
+        self.research_list_view.edit_research_requested.connect(self._edit_research_note)
+        self.research_list_view.delete_research_requested.connect(self._delete_research_note)
+        self.research_detail_view.save_requested.connect(self._save_research_note)
+        self.research_detail_view.cancel_requested.connect(self._show_research)
+
+        # Timeline view signals
+        self.timeline_view.add_event_requested.connect(self._add_timeline_event)
+        self.timeline_view.edit_event_requested.connect(self._edit_timeline_event)
+        self.timeline_view.delete_event_requested.connect(self._delete_timeline_event)
+        self.timeline_view.move_up_requested.connect(self._move_timeline_event_up)
+        self.timeline_view.move_down_requested.connect(self._move_timeline_event_down)
+
+        # Sources view signals
+        self.sources_list_view.add_source_requested.connect(self._add_source)
+        self.sources_list_view.edit_source_requested.connect(self._edit_source)
+        self.sources_list_view.delete_source_requested.connect(self._delete_source)
+
+        # Notes view signals
+        self.notes_list_view.add_note_requested.connect(self._add_note)
+        self.notes_list_view.edit_note_requested.connect(self._edit_note)
+        self.notes_list_view.delete_note_requested.connect(self._delete_note)
+        self.notes_list_view.toggle_pin_requested.connect(self._toggle_note_pin)
 
     def _update_ui_state(self):
         """Update UI based on project state"""
@@ -1556,6 +1622,360 @@ class TheNovelistMainWindow(QMainWindow):
             "</ul>"
             "<p>Built with PySide6, spaCy, and LanguageTool</p>"
         )
+
+    # ==================== Dynamic Containers ====================
+
+    def _show_locations(self):
+        """Show locations list view"""
+        if not self.project_manager.has_project():
+            return
+
+        locations = self.project_manager.location_manager.get_all_locations()
+        self.location_list_view.load_locations(locations)
+        self.workspace.show_view(WorkspaceContainer.VIEW_LOCATIONS)
+
+    def _add_location(self):
+        """Add a new location"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        # Load context data
+        all_locations = self.project_manager.location_manager.get_all_locations()
+        all_characters = self.project_manager.character_manager.get_all_characters()
+        self.location_detail_view.load_context(all_locations, all_characters)
+        self.location_detail_view.clear_form()
+
+        self.workspace.add_view("location_detail", self.location_detail_view)
+        self.workspace.show_view("location_detail")
+
+    def _edit_location(self, location_id: str):
+        """Edit an existing location"""
+        location = self.project_manager.location_manager.get_location(location_id)
+        if not location:
+            return
+
+        # Load context data
+        all_locations = self.project_manager.location_manager.get_all_locations()
+        all_characters = self.project_manager.character_manager.get_all_characters()
+        self.location_detail_view.load_context(all_locations, all_characters)
+        self.location_detail_view.load_location(location)
+
+        self.workspace.add_view("location_detail", self.location_detail_view)
+        self.workspace.show_view("location_detail")
+
+    def _save_location(self, location):
+        """Save a location"""
+        if location.id:
+            # Update existing
+            self.project_manager.location_manager.update_location(location)
+        else:
+            # Add new
+            self.project_manager.location_manager.add_location_object(location)
+
+        self.is_modified = True
+        self._update_ui_state()
+        self._show_locations()
+        self.statusBar().showMessage(f"Location saved: {location.name}", 3000)
+
+    def _delete_location(self, location_id: str):
+        """Delete a location"""
+        success = self.project_manager.location_manager.delete_location(location_id)
+        if success:
+            self._show_locations()
+            self.is_modified = True
+            self._update_ui_state()
+            self.statusBar().showMessage("Location deleted", 3000)
+
+    def _show_research(self):
+        """Show research notes list view"""
+        if not self.project_manager.has_project():
+            return
+
+        notes = self.project_manager.research_manager.get_all_research_notes()
+        self.research_list_view.load_research_notes(notes)
+        self.workspace.show_view(WorkspaceContainer.VIEW_RESEARCH)
+
+    def _add_research_note(self):
+        """Add a new research note"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        # Load categories
+        notes = self.project_manager.research_manager.get_all_research_notes()
+        categories = list(set(n.category for n in notes if n.category))
+        self.research_detail_view.load_categories(categories)
+        self.research_detail_view.clear_form()
+
+        self.workspace.add_view("research_detail", self.research_detail_view)
+        self.workspace.show_view("research_detail")
+
+    def _edit_research_note(self, research_id: str):
+        """Edit an existing research note"""
+        note = self.project_manager.research_manager.get_research_note(research_id)
+        if not note:
+            return
+
+        # Load categories
+        notes = self.project_manager.research_manager.get_all_research_notes()
+        categories = list(set(n.category for n in notes if n.category))
+        self.research_detail_view.load_categories(categories)
+        self.research_detail_view.load_research_note(note)
+
+        self.workspace.add_view("research_detail", self.research_detail_view)
+        self.workspace.show_view("research_detail")
+
+    def _save_research_note(self, note):
+        """Save a research note"""
+        if note.id:
+            # Update existing
+            self.project_manager.research_manager.update_research_note(note)
+        else:
+            # Add new
+            self.project_manager.research_manager.add_research_note_object(note)
+
+        self.is_modified = True
+        self._update_ui_state()
+        self._show_research()
+        self.statusBar().showMessage(f"Research note saved: {note.title}", 3000)
+
+    def _delete_research_note(self, research_id: str):
+        """Delete a research note"""
+        success = self.project_manager.research_manager.delete_research_note(research_id)
+        if success:
+            self._show_research()
+            self.is_modified = True
+            self._update_ui_state()
+            self.statusBar().showMessage("Research note deleted", 3000)
+
+    def _show_timeline(self):
+        """Show timeline view"""
+        if not self.project_manager.has_project():
+            return
+
+        events = self.project_manager.timeline_manager.get_all_timeline_events()
+        self.timeline_view.load_events(events)
+        self.workspace.show_view(WorkspaceContainer.VIEW_TIMELINE)
+
+    def _add_timeline_event(self):
+        """Add a new timeline event"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        # Create dialog
+        dialog = TimelineEventDialog(self)
+
+        # Load context
+        characters = self.project_manager.character_manager.get_all_characters()
+        locations = self.project_manager.location_manager.get_all_locations()
+        dialog.load_context(characters, locations)
+        dialog.clear_form()
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            event = dialog.get_event()
+            self.project_manager.timeline_manager.add_timeline_event_object(event)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_timeline()
+            self.statusBar().showMessage(f"Timeline event added: {event.title}", 3000)
+
+    def _edit_timeline_event(self, event_id: str):
+        """Edit an existing timeline event"""
+        event = self.project_manager.timeline_manager.get_timeline_event(event_id)
+        if not event:
+            return
+
+        # Create dialog
+        dialog = TimelineEventDialog(self)
+
+        # Load context
+        characters = self.project_manager.character_manager.get_all_characters()
+        locations = self.project_manager.location_manager.get_all_locations()
+        dialog.load_context(characters, locations)
+        dialog.load_event(event)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            updated_event = dialog.get_event()
+            self.project_manager.timeline_manager.update_timeline_event(updated_event)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_timeline()
+            self.statusBar().showMessage(f"Timeline event updated: {updated_event.title}", 3000)
+
+    def _delete_timeline_event(self, event_id: str):
+        """Delete a timeline event"""
+        success = self.project_manager.timeline_manager.delete_timeline_event(event_id)
+        if success:
+            self._show_timeline()
+            self.is_modified = True
+            self._update_ui_state()
+            self.statusBar().showMessage("Timeline event deleted", 3000)
+
+    def _move_timeline_event_up(self, event_id: str):
+        """Move timeline event up"""
+        success = self.project_manager.timeline_manager.move_event_up(event_id)
+        if success:
+            self._show_timeline()
+            self.is_modified = True
+            self._update_ui_state()
+
+    def _move_timeline_event_down(self, event_id: str):
+        """Move timeline event down"""
+        success = self.project_manager.timeline_manager.move_event_down(event_id)
+        if success:
+            self._show_timeline()
+            self.is_modified = True
+            self._update_ui_state()
+
+    def _show_sources(self):
+        """Show sources list view"""
+        if not self.project_manager.has_project():
+            return
+
+        sources = self.project_manager.source_manager.get_all_sources()
+        self.sources_list_view.load_sources(sources)
+        self.workspace.show_view(WorkspaceContainer.VIEW_SOURCES)
+
+    def _add_source(self):
+        """Add a new source"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        # Create dialog
+        dialog = SourceDetailDialog(self)
+        dialog.clear_form()
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            source = dialog.get_source()
+            self.project_manager.source_manager.add_source_object(source)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_sources()
+            self.statusBar().showMessage(f"Source added: {source.title}", 3000)
+
+    def _edit_source(self, source_id: str):
+        """Edit an existing source"""
+        source = self.project_manager.source_manager.get_source(source_id)
+        if not source:
+            return
+
+        # Create dialog
+        dialog = SourceDetailDialog(self)
+        dialog.load_source(source)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            updated_source = dialog.get_source()
+            self.project_manager.source_manager.update_source(updated_source)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_sources()
+            self.statusBar().showMessage(f"Source updated: {updated_source.title}", 3000)
+
+    def _delete_source(self, source_id: str):
+        """Delete a source"""
+        success = self.project_manager.source_manager.delete_source(source_id)
+        if success:
+            self._show_sources()
+            self.is_modified = True
+            self._update_ui_state()
+            self.statusBar().showMessage("Source deleted", 3000)
+
+    def _show_notes(self):
+        """Show notes list view"""
+        if not self.project_manager.has_project():
+            return
+
+        notes = self.project_manager.note_manager.get_all_notes()
+        self.notes_list_view.load_notes(notes)
+        self.workspace.show_view(WorkspaceContainer.VIEW_NOTES)
+
+    def _add_note(self):
+        """Add a new note"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        # Create dialog
+        dialog = NoteDetailDialog(self)
+
+        # Load context
+        characters = self.project_manager.character_manager.get_all_characters()
+        locations = self.project_manager.location_manager.get_all_locations()
+
+        # Get scenes from manuscript structure
+        scenes = []
+        structure = self.project_manager.manuscript_structure_manager.get_structure()
+        for chapter in structure.chapters:
+            for scene in chapter.scenes:
+                scenes.append((scene.id, f"{chapter.title} - {scene.title}"))
+
+        dialog.load_context(characters, locations, scenes)
+        dialog.clear_form()
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            note = dialog.get_note()
+            self.project_manager.note_manager.add_note_object(note)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_notes()
+            self.statusBar().showMessage(f"Note added: {note.title}", 3000)
+
+    def _edit_note(self, note_id: str):
+        """Edit an existing note"""
+        note = self.project_manager.note_manager.get_note(note_id)
+        if not note:
+            return
+
+        # Create dialog
+        dialog = NoteDetailDialog(self)
+
+        # Load context
+        characters = self.project_manager.character_manager.get_all_characters()
+        locations = self.project_manager.location_manager.get_all_locations()
+
+        # Get scenes from manuscript structure
+        scenes = []
+        structure = self.project_manager.manuscript_structure_manager.get_structure()
+        for chapter in structure.chapters:
+            for scene in chapter.scenes:
+                scenes.append((scene.id, f"{chapter.title} - {scene.title}"))
+
+        dialog.load_context(characters, locations, scenes)
+        dialog.load_note(note)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            updated_note = dialog.get_note()
+            self.project_manager.note_manager.update_note(updated_note)
+
+            self.is_modified = True
+            self._update_ui_state()
+            self._show_notes()
+            self.statusBar().showMessage(f"Note updated: {updated_note.title}", 3000)
+
+    def _delete_note(self, note_id: str):
+        """Delete a note"""
+        success = self.project_manager.note_manager.delete_note(note_id)
+        if success:
+            self._show_notes()
+            self.is_modified = True
+            self._update_ui_state()
+            self.statusBar().showMessage("Note deleted", 3000)
+
+    def _toggle_note_pin(self, note_id: str):
+        """Toggle note pin status"""
+        success = self.project_manager.note_manager.toggle_pin(note_id)
+        if success:
+            self._show_notes()
+            self.is_modified = True
+            self._update_ui_state()
 
     # ==================== Auto-save ====================
 
