@@ -1666,7 +1666,10 @@ class TheNovelistMainWindow(QMainWindow):
 
     def _save_location(self, location):
         """Save a location"""
-        if location.id:
+        # Check if location exists in manager
+        existing = self.project_manager.location_manager.get_location(location.id)
+
+        if existing:
             # Update existing
             self.project_manager.location_manager.update_location(location)
         else:
@@ -1728,7 +1731,10 @@ class TheNovelistMainWindow(QMainWindow):
 
     def _save_research_note(self, note):
         """Save a research note"""
-        if note.id:
+        # Check if note exists in manager
+        existing = self.project_manager.research_manager.get_research_note(note.id)
+
+        if existing:
             # Update existing
             self.project_manager.research_manager.update_research_note(note)
         else:
