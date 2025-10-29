@@ -17,6 +17,7 @@ class MenuBar(QMenuBar):
     recent_project_requested = Signal(str)  # filepath
     save_project_requested = Signal()
     save_project_as_requested = Signal()
+    export_project_requested = Signal()
     close_project_requested = Signal()
     create_backup_requested = Signal()
     restore_backup_requested = Signal()
@@ -112,6 +113,16 @@ class MenuBar(QMenuBar):
         save_as_action.triggered.connect(self.save_project_as_requested.emit)
         file_menu.addAction(save_as_action)
         self.save_as_action = save_as_action
+
+        file_menu.addSeparator()
+
+        # Export Project
+        export_action = QAction("&Export...", self)
+        export_action.setShortcut(QKeySequence("Ctrl+E"))
+        export_action.setStatusTip("Export project to PDF, DOCX, or Markdown")
+        export_action.triggered.connect(self.export_project_requested.emit)
+        file_menu.addAction(export_action)
+        self.export_action = export_action
 
         file_menu.addSeparator()
 
@@ -388,6 +399,7 @@ class MenuBar(QMenuBar):
         """
         self.save_action.setEnabled(is_open)
         self.save_as_action.setEnabled(is_open)
+        self.export_action.setEnabled(is_open)
         self.close_action.setEnabled(is_open)
         self.backup_action.setEnabled(is_open)
         # Restore action is always enabled (can restore without open project)

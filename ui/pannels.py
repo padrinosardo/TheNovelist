@@ -2,9 +2,9 @@
 Custom widgets for the interface panels
 """
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
-                               QScrollArea, QTextEdit, QWidget)
+                               QScrollArea, QTextEdit, QWidget, QPushButton)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextCharFormat, QColor, QTextCursor
+from PySide6.QtGui import QTextCharFormat, QColor, QTextCursor, QFont, QKeySequence
 
 
 class ResultsPanel(QFrame):
@@ -89,6 +89,10 @@ class TextEditor(QFrame):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # Formatting toolbar
+        self.toolbar = self._create_formatting_toolbar()
+        layout.addWidget(self.toolbar)
+
         # Counter info
         self.counter_info = QLabel("Words: 0 | Characters: 0")
         self.counter_info.setStyleSheet("color: #666; padding: 5px;")
@@ -101,8 +105,9 @@ class TextEditor(QFrame):
             "Grammar errors will be highlighted."
         )
 
-        # Connect signal to update counter
+        # Connect signals
         self.editor.textChanged.connect(self._update_counter)
+        self.editor.cursorPositionChanged.connect(self._update_format_buttons)
 
         layout.addWidget(self.editor)
 
@@ -116,6 +121,150 @@ class TextEditor(QFrame):
             border-top: 1px solid #dee2e6;
         """)
         layout.addWidget(legend)
+
+    def _create_formatting_toolbar(self):
+        """Create the rich text formatting toolbar"""
+        toolbar = QWidget()
+        toolbar.setStyleSheet("""
+            QWidget {
+                background-color: #f0f0f0;
+                border-bottom: 1px solid #d0d0d0;
+                padding: 5px;
+            }
+        """)
+
+        layout = QHBoxLayout(toolbar)
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+
+        # Bold button
+        self.bold_btn = QPushButton("B")
+        self.bold_btn.setCheckable(True)
+        self.bold_btn.setToolTip("Bold (Ctrl+B)")
+        self.bold_btn.setShortcut(QKeySequence("Ctrl+B"))
+        self.bold_btn.setFixedSize(32, 28)
+        self.bold_btn.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+        self.bold_btn.clicked.connect(self._toggle_bold)
+        self.bold_btn.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            QPushButton:checked {
+                background-color: #4CAF50;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #e8e8e8;
+            }
+        """)
+        layout.addWidget(self.bold_btn)
+
+        # Italic button
+        self.italic_btn = QPushButton("I")
+        self.italic_btn.setCheckable(True)
+        self.italic_btn.setToolTip("Italic (Ctrl+I)")
+        self.italic_btn.setShortcut(QKeySequence("Ctrl+I"))
+        self.italic_btn.setFixedSize(32, 28)
+        italic_font = QFont("Arial", 10)
+        italic_font.setItalic(True)
+        self.italic_btn.setFont(italic_font)
+        self.italic_btn.clicked.connect(self._toggle_italic)
+        self.italic_btn.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            QPushButton:checked {
+                background-color: #2196F3;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #e8e8e8;
+            }
+        """)
+        layout.addWidget(self.italic_btn)
+
+        # Underline button
+        self.underline_btn = QPushButton("U")
+        self.underline_btn.setCheckable(True)
+        self.underline_btn.setToolTip("Underline (Ctrl+U)")
+        self.underline_btn.setShortcut(QKeySequence("Ctrl+U"))
+        self.underline_btn.setFixedSize(32, 28)
+        underline_font = QFont("Arial", 10)
+        underline_font.setUnderline(True)
+        self.underline_btn.setFont(underline_font)
+        self.underline_btn.clicked.connect(self._toggle_underline)
+        self.underline_btn.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            QPushButton:checked {
+                background-color: #FF9800;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #e8e8e8;
+            }
+        """)
+        layout.addWidget(self.underline_btn)
+
+        # Spacer
+        layout.addStretch()
+
+        # Info label
+        info_label = QLabel("Rich text formatting enabled")
+        info_label.setStyleSheet("color: #666; font-size: 10px;")
+        layout.addWidget(info_label)
+
+        return toolbar
+
+    def _toggle_bold(self):
+        """Toggle bold formatting"""
+        fmt = self.editor.currentCharFormat()
+        if self.bold_btn.isChecked():
+            fmt.setFontWeight(QFont.Weight.Bold)
+        else:
+            fmt.setFontWeight(QFont.Weight.Normal)
+        self.editor.setCurrentCharFormat(fmt)
+        self.editor.setFocus()
+
+    def _toggle_italic(self):
+        """Toggle italic formatting"""
+        fmt = self.editor.currentCharFormat()
+        fmt.setFontItalic(self.italic_btn.isChecked())
+        self.editor.setCurrentCharFormat(fmt)
+        self.editor.setFocus()
+
+    def _toggle_underline(self):
+        """Toggle underline formatting"""
+        fmt = self.editor.currentCharFormat()
+        fmt.setFontUnderline(self.underline_btn.isChecked())
+        self.editor.setCurrentCharFormat(fmt)
+        self.editor.setFocus()
+
+    def _update_format_buttons(self):
+        """Update format buttons state based on current cursor position"""
+        fmt = self.editor.currentCharFormat()
+
+        # Block signals to avoid triggering the toggle actions
+        self.bold_btn.blockSignals(True)
+        self.italic_btn.blockSignals(True)
+        self.underline_btn.blockSignals(True)
+
+        # Update button states
+        self.bold_btn.setChecked(fmt.fontWeight() == QFont.Weight.Bold)
+        self.italic_btn.setChecked(fmt.fontItalic())
+        self.underline_btn.setChecked(fmt.fontUnderline())
+
+        # Unblock signals
+        self.bold_btn.blockSignals(False)
+        self.italic_btn.blockSignals(False)
+        self.underline_btn.blockSignals(False)
 
     def _update_counter(self):
         """Update word and character counter"""
@@ -219,12 +368,23 @@ class TextEditor(QFrame):
             print(f"Error clearing highlights: {e}")
 
     def get_text(self):
-        """Get text from the editor"""
+        """Get rich text (HTML) from the editor"""
+        return self.editor.toHtml()
+
+    def get_plain_text(self):
+        """Get plain text from the editor (without formatting)"""
         return self.editor.toPlainText()
 
     def set_text(self, text):
-        """Set text in the editor"""
-        self.editor.setPlainText(text if text else "")
+        """Set text in the editor (supports both plain text and HTML)"""
+        if not text:
+            self.editor.clear()
+        elif text.strip().startswith('<') or '<html>' in text.lower():
+            # It's HTML, preserve formatting
+            self.editor.setHtml(text)
+        else:
+            # It's plain text
+            self.editor.setPlainText(text)
         self._update_counter()
 
     def clear(self):

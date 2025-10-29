@@ -11,7 +11,7 @@ from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            StatisticsDashboard)
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
-                      NotesListView)
+                      NotesListView, ProjectInfoDetailView)
 from ui.dialogs import (TimelineEventDialog, SourceDetailDialog, NoteDetailDialog)
 from ui.styles import Stili
 from managers.project_manager import ProjectManager
@@ -101,6 +101,7 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_manager.character_manager
         )
         self.statistics_dashboard = StatisticsDashboard()
+        self.project_info_view = ProjectInfoDetailView()
 
         # Dynamic container views
         self.location_list_view = LocationListView()
@@ -115,6 +116,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTERS_LIST, self.characters_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTER_DETAIL, self.character_detail_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_STATISTICS, self.statistics_dashboard)
+        self.workspace.add_view(WorkspaceContainer.VIEW_PROJECT_INFO, self.project_info_view)
 
         # Add dynamic container views
         self.workspace.add_view(WorkspaceContainer.VIEW_LOCATIONS, self.location_list_view)
@@ -164,6 +166,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.recent_project_requested.connect(self._open_recent_project)
         self.menu_bar.save_project_requested.connect(self.save_project)
         self.menu_bar.save_project_as_requested.connect(self.save_project_as)
+        self.menu_bar.export_project_requested.connect(self.export_project)
         self.menu_bar.close_project_requested.connect(self.close_project)
         self.menu_bar.create_backup_requested.connect(self._create_backup)
         self.menu_bar.restore_backup_requested.connect(self._restore_backup)
@@ -205,6 +208,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.characters_list_selected.connect(self._show_characters_list)
         self.project_tree.character_selected.connect(self._show_character_detail)
         self.project_tree.statistics_selected.connect(self._show_statistics)
+        self.project_tree.project_info_selected.connect(self._show_project_info)
 
         # Dynamic container selection signals
         self.project_tree.locations_selected.connect(self._show_locations)
@@ -241,6 +245,10 @@ class TheNovelistMainWindow(QMainWindow):
         self.character_detail_view.character_updated.connect(self._on_character_updated)
         self.character_detail_view.character_deleted.connect(self._on_character_deleted)
 
+        # Project info view signals
+        self.project_info_view.save_requested.connect(self._save_project_info)
+        self.project_info_view.cancel_requested.connect(self.workspace.show_manuscript)
+
         # Statistics dashboard signals
         self.statistics_dashboard.refresh_requested.connect(self._refresh_statistics)
         self.statistics_dashboard.daily_goal_changed.connect(self._set_daily_goal)
@@ -270,8 +278,6 @@ class TheNovelistMainWindow(QMainWindow):
         self.timeline_view.add_event_requested.connect(self._add_timeline_event)
         self.timeline_view.edit_event_requested.connect(self._edit_timeline_event)
         self.timeline_view.delete_event_requested.connect(self._delete_timeline_event)
-        self.timeline_view.move_up_requested.connect(self._move_timeline_event_up)
-        self.timeline_view.move_down_requested.connect(self._move_timeline_event_down)
 
         # Sources view signals
         self.sources_list_view.add_source_requested.connect(self._add_source)
@@ -609,6 +615,30 @@ class TheNovelistMainWindow(QMainWindow):
             )
             return False
 
+    def export_project(self):
+        """Export project to PDF, DOCX, or Markdown"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(
+                self,
+                "No Project",
+                "Please create or open a project before exporting."
+            )
+            return
+
+        # Save current scene content first
+        self._save_current_scene()
+
+        # Import and show export dialog
+        from ui.dialogs.export_dialog import ExportDialog
+
+        dialog = ExportDialog(self.project_manager, self)
+        result = dialog.exec()
+
+        if result:
+            self.statusBar().showMessage("Project exported successfully", 3000)
+        else:
+            self.statusBar().showMessage("Export cancelled", 2000)
+
     def close_project(self):
         """Close the current project"""
         if not self._check_unsaved_changes():
@@ -836,6 +866,62 @@ class TheNovelistMainWindow(QMainWindow):
         """Show statistics dashboard"""
         self._refresh_statistics()
         self.workspace.show_statistics()
+
+    def _show_project_info(self):
+        """Show project info detail view"""
+        if not self.project_manager.has_project():
+            return
+
+        project = self.project_manager.current_project
+        self.project_info_view.load_project(project)
+        self.workspace.show_project_info()
+
+    def _save_project_info(self, updated_project):
+        """
+        Save updated project info
+
+        Args:
+            updated_project: Updated Project instance
+        """
+        if not self.project_manager.has_project():
+            return
+
+        # Update current project with new data
+        self.project_manager.current_project = updated_project
+
+        # Update modified date
+        self.project_manager.current_project.update_modified_date()
+
+        # Mark as modified
+        self.is_modified = True
+
+        # Save project
+        success = self.project_manager.save_project()
+
+        if success:
+            # Refresh project tree to show updated info
+            characters = self.project_manager.character_manager.get_all_characters()
+            manuscript_structure = self.project_manager.manuscript_structure_manager.manuscript_structure
+            self.project_tree.load_project(updated_project, characters, manuscript_structure)
+
+            # Update UI state
+            self._update_ui_state()
+
+            # Show confirmation
+            QMessageBox.information(
+                self,
+                "Project Info Updated",
+                "Project information has been updated successfully!"
+            )
+
+            # Return to manuscript view
+            self.workspace.show_manuscript()
+        else:
+            QMessageBox.critical(
+                self,
+                "Save Failed",
+                "Failed to save project information. Please try again."
+            )
 
     def _refresh_statistics(self):
         """Refresh statistics data"""
@@ -1765,7 +1851,9 @@ class TheNovelistMainWindow(QMainWindow):
             return
 
         events = self.project_manager.timeline_manager.get_all_timeline_events()
-        self.timeline_view.load_events(events)
+        characters = self.project_manager.character_manager.get_all_characters()
+        locations = self.project_manager.location_manager.get_all_locations()
+        self.timeline_view.load_events(events, characters, locations)
         self.workspace.show_view(WorkspaceContainer.VIEW_TIMELINE)
 
     def _add_timeline_event(self):
@@ -1824,22 +1912,6 @@ class TheNovelistMainWindow(QMainWindow):
             self.is_modified = True
             self._update_window_title()
             self.statusBar().showMessage("Timeline event deleted", 3000)
-
-    def _move_timeline_event_up(self, event_id: str):
-        """Move timeline event up"""
-        success = self.project_manager.timeline_manager.move_event_up(event_id)
-        if success:
-            self._show_timeline()
-            self.is_modified = True
-            self._update_window_title()
-
-    def _move_timeline_event_down(self, event_id: str):
-        """Move timeline event down"""
-        success = self.project_manager.timeline_manager.move_event_down(event_id)
-        if success:
-            self._show_timeline()
-            self.is_modified = True
-            self._update_window_title()
 
     def _show_sources(self):
         """Show sources list view"""
