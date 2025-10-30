@@ -374,7 +374,6 @@ class CharacterDetailView(QWidget):
 
             # Update character's conversation history manually (since update_character doesn't handle it)
             character.ai_conversation_history = updated_character.ai_conversation_history
-            self.character_manager.save_all()
 
             # Reload character data (in case AI suggestions were applied)
             self.load_character(self._current_character_id)
