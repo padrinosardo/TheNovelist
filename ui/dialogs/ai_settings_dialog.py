@@ -156,9 +156,10 @@ class AISettingsDialog(QDialog):
         form.addRow("API Key *:", self.claude_api_key)
 
         self.claude_model = QComboBox()
-        self.claude_model.addItem("Claude 3.5 Sonnet (Recommended)", "claude-3-5-sonnet-20241022")
+        self.claude_model.addItem("Claude 3.5 Sonnet (Recommended)", "claude-3-5-sonnet-20240620")
         self.claude_model.addItem("Claude 3 Opus", "claude-3-opus-20240229")
         self.claude_model.addItem("Claude 3 Sonnet", "claude-3-sonnet-20240229")
+        self.claude_model.addItem("Claude 3 Haiku", "claude-3-haiku-20240307")
         form.addRow("Model:", self.claude_model)
 
         self.claude_temperature = QDoubleSpinBox()

@@ -17,7 +17,7 @@ class ClaudeProvider(AIProvider):
         - max_tokens: Max response length (default: 2000)
     """
 
-    DEFAULT_MODEL = 'claude-3-5-sonnet-20241022'
+    DEFAULT_MODEL = 'claude-3-5-sonnet-20240620'
 
     def _validate_config(self) -> None:
         """Validate Claude-specific configuration"""

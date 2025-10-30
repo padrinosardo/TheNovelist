@@ -71,7 +71,7 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
             'providers': {
                 'claude': {
                     'api_key': '',
-                    'model': 'claude-3-5-sonnet-20241022',
+                    'model': 'claude-3-5-sonnet-20240620',
                     'temperature': 0.7,
                     'max_tokens': 2000
                 },
