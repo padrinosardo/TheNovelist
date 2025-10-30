@@ -116,50 +116,10 @@ class ProjectTree(QTreeWidget):
         root.setExpanded(True)
         root.setData(0, Qt.ItemDataRole.UserRole, "root")
 
-        # Project Info node - NEW!
+        # Project Info node - Simple clickable item without children
         info_item = QTreeWidgetItem(root)
         info_item.setText(0, "📋 Project Info")
-        info_item.setExpanded(True)
         info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info")
-
-        # Author
-        author_item = QTreeWidgetItem(info_item)
-        author_item.setText(0, f"  ✍️  Author: {project.author}")
-        author_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
-        author_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
-
-        # Language
-        language_names = {
-            'it': 'Italiano (IT)',
-            'en': 'English (EN)',
-            'es': 'Español (ES)',
-            'fr': 'Français (FR)',
-            'de': 'Deutsch (DE)'
-        }
-        language_display = language_names.get(project.language, project.language.upper())
-        language_item = QTreeWidgetItem(info_item)
-        language_item.setText(0, f"  🌍 Language: {language_display}")
-        language_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
-        language_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
-
-        # Project Type (for now, default to "Novel" - will be implemented in Milestone 2)
-        type_item = QTreeWidgetItem(info_item)
-        type_display = getattr(project, 'project_type', 'Novel')  # Default if not exists yet
-        type_item.setText(0, f"  📚 Type: {type_display}")
-        type_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
-        type_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
-
-        # Created Date
-        try:
-            created_date = datetime.fromisoformat(project.created_date)
-            date_display = created_date.strftime("%b %d, %Y")
-        except:
-            date_display = project.created_date[:10] if len(project.created_date) >= 10 else project.created_date
-
-        date_item = QTreeWidgetItem(info_item)
-        date_item.setText(0, f"  📅 Created: {date_display}")
-        date_item.setData(0, Qt.ItemDataRole.UserRole, "info_detail")
-        date_item.setFlags(Qt.ItemFlag.ItemIsEnabled)  # Non-selectable
 
         # Manuscript node with hierarchy
         manuscript_item = QTreeWidgetItem(root)

@@ -8,6 +8,7 @@ from .research_detail_view import ResearchDetailView
 from .timeline_view import TimelineView
 from .sources_list_view import SourcesListView
 from .notes_list_view import NotesListView
+from .project_info_detail_view import ProjectInfoDetailView
 
 __all__ = [
     'LocationListView',
@@ -17,4 +18,5 @@ __all__ = [
     'TimelineView',
     'SourcesListView',
     'NotesListView',
+    'ProjectInfoDetailView',
 ]

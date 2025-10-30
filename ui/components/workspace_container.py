@@ -21,6 +21,7 @@ class WorkspaceContainer(QStackedWidget):
     VIEW_CHARACTERS_LIST = "characters_list"
     VIEW_CHARACTER_DETAIL = "character_detail"
     VIEW_STATISTICS = "statistics"
+    VIEW_PROJECT_INFO = "project_info"
 
     # Dynamic container views
     VIEW_LOCATIONS = "locations"
@@ -103,3 +104,7 @@ class WorkspaceContainer(QStackedWidget):
     def show_statistics(self):
         """Show the statistics dashboard view"""
         self.show_view(self.VIEW_STATISTICS)
+
+    def show_project_info(self):
+        """Show the project info detail view"""
+        self.show_view(self.VIEW_PROJECT_INFO)
