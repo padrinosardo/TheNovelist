@@ -47,3 +47,8 @@ it_core_news_lg/
 *.db
 *.sqlite
 config.ini
+
+# Test files
+test_*.py
+test_export.*
+utils/export_styles/
