@@ -133,6 +133,27 @@ class CharacterDetailView(QWidget):
 
         # Action buttons
         buttons_layout = QHBoxLayout()
+
+        # AI Assistant button (left side)
+        self.ai_assistant_btn = QPushButton("🤖 AI Assistant")
+        self.ai_assistant_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9C27B0;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                font-size: 14px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #7B1FA2;
+            }
+        """)
+        self.ai_assistant_btn.setToolTip("Open AI Assistant for character development")
+        self.ai_assistant_btn.clicked.connect(self._on_ai_assistant)
+        buttons_layout.addWidget(self.ai_assistant_btn)
+
         buttons_layout.addStretch()
 
         # Delete button
@@ -314,6 +335,51 @@ class CharacterDetailView(QWidget):
                 "Error",
                 "Could not add image to character."
             )
+
+    def _on_ai_assistant(self):
+        """Open AI Assistant dialog for character development"""
+        if not self.character_manager or not self._current_character_id:
+            QMessageBox.warning(
+                self,
+                "No Character Selected",
+                "Please save the character first before using AI Assistant."
+            )
+            return
+
+        # Get current character
+        character = self.character_manager.get_character(self._current_character_id)
+        if not character:
+            return
+
+        # Import here to avoid circular imports
+        from ui.dialogs.character_ai_assistant_dialog import CharacterAIAssistantDialog
+        from managers.ai import AIManager
+
+        # Initialize AI Manager
+        ai_manager = AIManager()
+
+        # Open dialog
+        dialog = CharacterAIAssistantDialog(character, ai_manager, self)
+
+        if dialog.exec():
+            # Get updated character with conversation history
+            updated_character = dialog.get_updated_character()
+
+            # Save updated conversation history
+            self.character_manager.update_character(
+                self._current_character_id,
+                name=updated_character.name,
+                description=updated_character.description
+            )
+
+            # Update character's conversation history manually (since update_character doesn't handle it)
+            character.ai_conversation_history = updated_character.ai_conversation_history
+            self.character_manager.save_all()
+
+            # Reload character data (in case AI suggestions were applied)
+            self.load_character(self._current_character_id)
+
+            self.character_updated.emit()
 
     def _on_image_removed(self, filename: str):
         """

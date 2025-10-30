@@ -195,6 +195,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.grammar_check_requested.connect(self.analyze_grammar)
         self.menu_bar.repetitions_check_requested.connect(self.analyze_repetitions)
         self.menu_bar.style_check_requested.connect(self.analyze_style)
+        self.menu_bar.ai_settings_requested.connect(self._open_ai_settings)
 
         # Help menu
         self.menu_bar.view_error_log_requested.connect(self._view_error_log)
@@ -1712,6 +1713,15 @@ class TheNovelistMainWindow(QMainWindow):
             "</ul>"
             "<p>Built with PySide6, spaCy, and LanguageTool</p>"
         )
+
+    def _open_ai_settings(self):
+        """Open AI Settings dialog"""
+        from ui.dialogs.ai_settings_dialog import AISettingsDialog
+        from managers.ai import AIManager
+
+        ai_manager = AIManager()
+        dialog = AISettingsDialog(ai_manager, self)
+        dialog.exec()
 
     # ==================== Dynamic Containers ====================
 

@@ -52,6 +52,7 @@ class MenuBar(QMenuBar):
     grammar_check_requested = Signal()
     repetitions_check_requested = Signal()
     style_check_requested = Signal()
+    ai_settings_requested = Signal()
 
     # Help menu signals
     documentation_requested = Signal()
@@ -358,6 +359,15 @@ class MenuBar(QMenuBar):
         style_action.triggered.connect(self.style_check_requested.emit)
         tools_menu.addAction(style_action)
         self.style_action = style_action
+
+        tools_menu.addSeparator()
+
+        # AI Settings
+        ai_settings_action = QAction("🤖 &AI Settings...", self)
+        ai_settings_action.setStatusTip("Configure AI providers for character development")
+        ai_settings_action.triggered.connect(self.ai_settings_requested.emit)
+        tools_menu.addAction(ai_settings_action)
+        self.ai_settings_action = ai_settings_action
 
     def _create_help_menu(self):
         """Create Help menu"""
