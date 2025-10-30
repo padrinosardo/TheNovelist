@@ -3,7 +3,7 @@ Timeline View - Shows chronological events in the story
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget,
-    QListWidgetItem, QLabel, QLineEdit, QMessageBox
+    QListWidgetItem, QLabel, QLineEdit, QMessageBox, QComboBox
 )
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
@@ -21,8 +21,6 @@ class TimelineView(QWidget):
     add_event_requested = Signal()
     edit_event_requested = Signal(str)  # event_id
     delete_event_requested = Signal(str)  # event_id
-    move_up_requested = Signal(str)  # event_id
-    move_down_requested = Signal(str)  # event_id
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,7 +39,7 @@ class TimelineView(QWidget):
         header.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         layout.addWidget(header)
 
-        # Search bar
+        # Search and filters bar
         search_layout = QHBoxLayout()
         search_layout.setSpacing(10)
 
@@ -50,10 +48,24 @@ class TimelineView(QWidget):
         self.search_input.textChanged.connect(self._on_search_changed)
         search_layout.addWidget(self.search_input)
 
-        self.clear_search_btn = QPushButton("Clear")
-        self.clear_search_btn.setMaximumWidth(80)
-        self.clear_search_btn.clicked.connect(self._clear_search)
-        search_layout.addWidget(self.clear_search_btn)
+        # Character filter
+        self.character_filter = QComboBox()
+        self.character_filter.addItem("All Characters", "")
+        self.character_filter.setMinimumWidth(150)
+        self.character_filter.currentIndexChanged.connect(self._on_filter_changed)
+        search_layout.addWidget(self.character_filter)
+
+        # Location filter
+        self.location_filter = QComboBox()
+        self.location_filter.addItem("All Locations", "")
+        self.location_filter.setMinimumWidth(150)
+        self.location_filter.currentIndexChanged.connect(self._on_filter_changed)
+        search_layout.addWidget(self.location_filter)
+
+        self.clear_filters_btn = QPushButton("Clear Filters")
+        self.clear_filters_btn.setMaximumWidth(120)
+        self.clear_filters_btn.clicked.connect(self._clear_filters)
+        search_layout.addWidget(self.clear_filters_btn)
 
         layout.addLayout(search_layout)
 
@@ -118,16 +130,6 @@ class TimelineView(QWidget):
         self.edit_btn.clicked.connect(self._on_edit_clicked)
         button_layout.addWidget(self.edit_btn)
 
-        self.move_up_btn = QPushButton("⬆️ Move Up")
-        self.move_up_btn.setEnabled(False)
-        self.move_up_btn.clicked.connect(self._on_move_up_clicked)
-        button_layout.addWidget(self.move_up_btn)
-
-        self.move_down_btn = QPushButton("⬇️ Move Down")
-        self.move_down_btn.setEnabled(False)
-        self.move_down_btn.clicked.connect(self._on_move_down_clicked)
-        button_layout.addWidget(self.move_down_btn)
-
         self.delete_btn = QPushButton("🗑️ Delete")
         self.delete_btn.setEnabled(False)
         self.delete_btn.setStyleSheet("""
@@ -149,15 +151,39 @@ class TimelineView(QWidget):
 
         layout.addLayout(button_layout)
 
-    def load_events(self, events: List[TimelineEvent]):
+    def load_events(self, events: List[TimelineEvent], characters=None, locations=None):
         """
-        Load timeline events
+        Load timeline events and sort chronologically
 
         Args:
-            events: List of TimelineEvent objects (should be sorted by sort_order)
+            events: List of TimelineEvent objects
+            characters: List of Character objects (optional, for filter)
+            locations: List of Location objects (optional, for filter)
         """
-        self._events = sorted(events, key=lambda e: e.sort_order)
+        # Sort chronologically by date (oldest first)
+        # Events without dates go to the end
+        def sort_key(event):
+            if not event.date:
+                return (1, "")  # No date goes last
+            return (0, event.date.lower())
+
+        self._events = sorted(events, key=sort_key)
         self._filtered_events = self._events.copy()
+
+        # Update character filter
+        self.character_filter.clear()
+        self.character_filter.addItem("All Characters", "")
+        if characters:
+            for char in characters:
+                self.character_filter.addItem(f"👤 {char.name}", char.id)
+
+        # Update location filter
+        self.location_filter.clear()
+        self.location_filter.addItem("All Locations", "")
+        if locations:
+            for loc in locations:
+                self.location_filter.addItem(f"📍 {loc.name}", loc.id)
+
         self._refresh_list()
 
     def _refresh_list(self):
@@ -202,36 +228,54 @@ class TimelineView(QWidget):
             self.stats_label.setText(f"{filtered} of {total} events")
 
     def _on_search_changed(self, text: str):
-        """Filter events based on search text"""
-        search_text = text.lower().strip()
+        """Filter events based on search text and active filters"""
+        self._apply_filters()
 
-        if not search_text:
-            self._filtered_events = self._events.copy()
-        else:
-            self._filtered_events = [
-                event for event in self._events
-                if search_text in event.title.lower() or
-                   search_text in event.description.lower() or
-                   (event.date and search_text in event.date.lower())
-            ]
+    def _on_filter_changed(self):
+        """Handle filter combo box changes"""
+        self._apply_filters()
+
+    def _apply_filters(self):
+        """Apply all active filters (search, character, location)"""
+        search_text = self.search_input.text().lower().strip()
+        selected_char_id = self.character_filter.currentData()
+        selected_loc_id = self.location_filter.currentData()
+
+        self._filtered_events = []
+
+        for event in self._events:
+            # Search filter
+            if search_text:
+                if not (search_text in event.title.lower() or
+                       search_text in event.description.lower() or
+                       (event.date and search_text in event.date.lower())):
+                    continue
+
+            # Character filter
+            if selected_char_id:
+                if selected_char_id not in event.characters:
+                    continue
+
+            # Location filter
+            if selected_loc_id:
+                if selected_loc_id not in event.locations:
+                    continue
+
+            self._filtered_events.append(event)
 
         self._refresh_list()
 
-    def _clear_search(self):
-        """Clear search input"""
+    def _clear_filters(self):
+        """Clear all filters"""
         self.search_input.clear()
+        self.character_filter.setCurrentIndex(0)
+        self.location_filter.setCurrentIndex(0)
 
     def _on_event_clicked(self, item: QListWidgetItem):
         """Handle event click"""
         event_id = item.data(Qt.ItemDataRole.UserRole)
         self.edit_btn.setEnabled(True)
         self.delete_btn.setEnabled(True)
-
-        # Enable/disable move buttons based on position
-        current_row = self.timeline_list.row(item)
-        self.move_up_btn.setEnabled(current_row > 0)
-        self.move_down_btn.setEnabled(current_row < self.timeline_list.count() - 1)
-
         self.event_selected.emit(event_id)
 
     def _on_event_double_clicked(self, item: QListWidgetItem):
@@ -245,20 +289,6 @@ class TimelineView(QWidget):
         if current_item:
             event_id = current_item.data(Qt.ItemDataRole.UserRole)
             self.edit_event_requested.emit(event_id)
-
-    def _on_move_up_clicked(self):
-        """Move event up in timeline"""
-        current_item = self.timeline_list.currentItem()
-        if current_item:
-            event_id = current_item.data(Qt.ItemDataRole.UserRole)
-            self.move_up_requested.emit(event_id)
-
-    def _on_move_down_clicked(self):
-        """Move event down in timeline"""
-        current_item = self.timeline_list.currentItem()
-        if current_item:
-            event_id = current_item.data(Qt.ItemDataRole.UserRole)
-            self.move_down_requested.emit(event_id)
 
     def _on_delete_clicked(self):
         """Handle delete button click"""

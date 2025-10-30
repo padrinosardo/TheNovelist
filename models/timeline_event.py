@@ -21,6 +21,7 @@ class TimelineEvent:
         description: Detailed description of the event
         characters: List of character IDs involved in the event
         locations: List of location IDs where the event takes place
+        notes: Additional notes about the event
         id: Unique identifier
         created_date: ISO format creation timestamp (real world)
         modified_date: ISO format last modification timestamp (real world)
@@ -31,6 +32,7 @@ class TimelineEvent:
     description: str = ""
     characters: List[str] = field(default_factory=list)  # Character IDs
     locations: List[str] = field(default_factory=list)  # Location IDs
+    notes: str = ""  # Additional notes
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     created_date: str = ""  # Real world timestamp
     modified_date: str = ""  # Real world timestamp
@@ -107,6 +109,7 @@ class TimelineEvent:
             'description': self.description,
             'characters': self.characters,
             'locations': self.locations,
+            'notes': self.notes,
             'created_date': self.created_date,
             'modified_date': self.modified_date,
             'sort_order': self.sort_order
@@ -130,6 +133,7 @@ class TimelineEvent:
             description=data.get('description', ''),
             characters=data.get('characters', []),
             locations=data.get('locations', []),
+            notes=data.get('notes', ''),
             created_date=data.get('created_date', datetime.now().isoformat()),
             modified_date=data.get('modified_date', datetime.now().isoformat()),
             sort_order=data.get('sort_order', 0)

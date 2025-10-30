@@ -4,7 +4,7 @@ Timeline Event Dialog - Edit/create timeline events
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel,
     QLineEdit, QTextEdit, QPushButton, QListWidget, QListWidgetItem,
-    QMessageBox, QScrollArea, QFrame
+    QMessageBox, QScrollArea, QFrame, QWidget
 )
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
