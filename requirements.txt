@@ -8,8 +8,10 @@ language-tool-python>=2.8.0
 spacy>=3.7.0
 textstat>=0.7.3
 
-# Generazione AI (opzionale)
-ollama>=0.1.0
+# Generazione AI (opzionale - installare solo provider necessari)
+anthropic>=0.39.0  # Claude AI
+openai>=1.0.0      # OpenAI GPT
+ollama>=0.1.0      # Ollama (locale)
 
 # Note:
 # Dopo l'installazione, esegui:

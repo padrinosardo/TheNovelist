@@ -16,11 +16,13 @@ class Character:
         name: Character's full name
         description: Detailed description of the character
         images: List of image filenames associated with this character
+        ai_conversation_history: History of AI-assisted character development conversations
     """
     name: str
     description: str = ""
     images: List[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    ai_conversation_history: List[dict] = field(default_factory=list)  # AI conversation messages
 
     def to_dict(self) -> dict:
         """
@@ -33,7 +35,8 @@ class Character:
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'images': self.images
+            'images': self.images,
+            'ai_conversation_history': self.ai_conversation_history
         }
 
     @classmethod
@@ -51,5 +54,6 @@ class Character:
             id=data.get('id', str(uuid.uuid4())),
             name=data.get('name', ''),
             description=data.get('description', ''),
-            images=data.get('images', [])
+            images=data.get('images', []),
+            ai_conversation_history=data.get('ai_conversation_history', [])
         )
