@@ -3,7 +3,7 @@ Claude AI Provider (Anthropic API)
 """
 from typing import List, Optional, Dict, Any
 from .ai_provider import AIProvider, AIMessage, AIResponse
-from utils.logging_config import AppLogger
+from utils.logger import AppLogger
 
 
 class ClaudeProvider(AIProvider):

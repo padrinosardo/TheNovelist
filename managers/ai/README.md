@@ -52,7 +52,8 @@ La configurazione è salvata in: `~/.thenovelist/ai_config.json`
 
 #### Metodo 1: Variabile d'ambiente
 ```bash
-export ANTHROPIC_API_KEY="your-key-here"
+
+export ANTHROPIC_API_KEY="x-api-key: REDACTED"
 ```
 
 #### Metodo 2: Tramite AIManager (programmatico)

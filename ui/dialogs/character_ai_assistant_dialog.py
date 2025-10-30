@@ -10,7 +10,7 @@ from PySide6.QtGui import QFont, QTextCursor
 from typing import Optional, List
 from models.character import Character
 from managers.ai import AIManager, AIMessage, AIResponse
-from utils.logging_config import AppLogger
+from utils.logger import AppLogger
 
 
 class AIWorkerThread(QThread):

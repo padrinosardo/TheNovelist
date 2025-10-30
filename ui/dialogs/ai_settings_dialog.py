@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from managers.ai import AIManager
-from utils.logging_config import AppLogger
+from utils.logger import AppLogger
 
 
 class AISettingsDialog(QDialog):

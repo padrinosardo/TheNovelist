@@ -4,7 +4,7 @@ AI Manager - Factory and configuration management for AI providers
 from typing import Optional, Dict, Any, List
 from .ai_provider import AIProvider, AIMessage, AIResponse
 from .claude_provider import ClaudeProvider
-from utils.logging_config import AppLogger
+from utils.logger import AppLogger
 import json
 import os
 
