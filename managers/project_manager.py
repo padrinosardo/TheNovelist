@@ -308,6 +308,11 @@ class ProjectManager:
             # Setup manuscript structure manager
             self.manuscript_structure_manager = ManuscriptStructureManager(manuscript_structure)
 
+            # Migrate containers for old projects (Milestone 2 - Step 4.3)
+            container_migrations = self._migrate_containers(project.project_type)
+            if container_migrations:
+                AppLogger.info(f"Container migrations applied: {', '.join(container_migrations)}")
+
             # Initialize container managers (Milestone 2)
             self.container_manager = ContainerManager(self._temp_dir)
             self.location_manager = LocationManager(self.container_manager, images_dir)
@@ -451,7 +456,60 @@ class ProjectManager:
             manifest_data['tags'] = []
             migrations_applied.append("Added tags field (empty list)")
 
+        # Migration 4: Add containers_version field if missing (Milestone 2 - Step 4.3)
+        # This tracks which version of the container system is present
+        if 'containers_version' not in manifest_data:
+            manifest_data['containers_version'] = '1.0'
+            migrations_applied.append("Added containers_version field (1.0)")
+            AppLogger.info("Migration applied: Added containers_version field with version '1.0'")
+
         return manifest_data, migrations_applied
+
+    def _migrate_containers(self, project_type: ProjectType) -> List[str]:
+        """
+        Migrate old projects to include container files (Milestone 2 - Step 4.3)
+
+        Creates empty container JSON files for projects that don't have them yet.
+        This enables old projects to use the new container system (locations,
+        research notes, timeline, etc.) without requiring manual conversion.
+
+        Args:
+            project_type: The project type to determine which containers are needed
+
+        Returns:
+            List[str]: List of migration messages describing what was created
+        """
+        migrations_applied = []
+
+        # Get containers that should exist for this project type
+        available_containers = ContainerType.get_available_for_project_type(project_type)
+
+        for container_type in available_containers:
+            # Skip containers that are handled separately
+            if container_type in [ContainerType.MANUSCRIPT, ContainerType.CHARACTERS]:
+                continue
+
+            # Get the expected file path
+            filename = ContainerType.get_filename(container_type)
+            container_path = os.path.join(self._temp_dir, filename)
+
+            # If file doesn't exist, create it with an empty array
+            if not os.path.exists(container_path):
+                try:
+                    with open(container_path, 'w', encoding='utf-8') as f:
+                        json.dump([], f, indent=2)
+
+                    icon, name = ContainerType.get_display_info(container_type, 'en')
+                    migrations_applied.append(f"Created empty container: {name} ({filename})")
+                    AppLogger.info(f"Container migration: Created {filename}")
+
+                except Exception as e:
+                    AppLogger.error(f"Failed to create container file {filename}: {e}")
+
+        if migrations_applied:
+            AppLogger.info(f"Container migration completed: {len(migrations_applied)} containers created")
+
+        return migrations_applied
 
     def _set_nlp_language(self, language: str):
         """

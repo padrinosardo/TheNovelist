@@ -36,6 +36,7 @@ class Project:
     genre: str = ""
     target_word_count: int = 0
     tags: List[str] = field(default_factory=list)
+    containers_version: str = "1.0"  # Version of container system (Milestone 2)
 
     @classmethod
     def create_new(cls, title: str, author: str, language: str = "it",
@@ -91,7 +92,8 @@ class Project:
             'modified_date': self.modified_date,
             'genre': self.genre,
             'target_word_count': self.target_word_count,
-            'tags': self.tags
+            'tags': self.tags,
+            'containers_version': self.containers_version
         }
 
     @classmethod
@@ -123,5 +125,6 @@ class Project:
             manuscript_text=manuscript_text,
             genre=data.get('genre', ''),
             target_word_count=data.get('target_word_count', 0),
-            tags=data.get('tags', [])
+            tags=data.get('tags', []),
+            containers_version=data.get('containers_version', '1.0')  # Default to 1.0 for old projects
         )
