@@ -15,6 +15,7 @@ from ui.views import (LocationListView, LocationDetailView, ResearchListView,
 from ui.dialogs import (TimelineEventDialog, SourceDetailDialog, NoteDetailDialog)
 from ui.styles import Stili
 from managers.project_manager import ProjectManager
+from managers.ai.ai_manager import AIManager
 from workers.thread_analysis import AnalysisThread
 from analysis.grammar import GrammarAnalyzer
 from analysis.repetition import RepetitionAnalyzer
@@ -42,6 +43,9 @@ class TheNovelistMainWindow(QMainWindow):
         # Project management
         self.project_manager = ProjectManager()
         self.is_modified = False
+
+        # AI management
+        self.ai_manager = AIManager()
 
         # Analysis
         self.analysis_thread = None
@@ -95,17 +99,27 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace = WorkspaceContainer()
 
         # Create and add views
-        self.manuscript_view = ManuscriptView()
+        self.manuscript_view = ManuscriptView(
+            manuscript_manager=self.project_manager.manuscript_structure_manager,
+            project_manager=self.project_manager,
+            ai_manager=self.ai_manager
+        )
         self.characters_list_view = CharactersListView()
         self.character_detail_view = CharacterDetailView(
-            self.project_manager.character_manager
+            character_manager=self.project_manager.character_manager,
+            project_manager=self.project_manager,
+            ai_manager=self.ai_manager
         )
         self.statistics_dashboard = StatisticsDashboard()
         self.project_info_view = ProjectInfoDetailView()
 
         # Dynamic container views
         self.location_list_view = LocationListView()
-        self.location_detail_view = LocationDetailView()
+        self.location_detail_view = LocationDetailView(
+            location_manager=self.project_manager.location_manager,
+            project_manager=self.project_manager,
+            ai_manager=self.ai_manager
+        )
         self.research_list_view = ResearchListView()
         self.research_detail_view = ResearchDetailView()
         self.timeline_view = TimelineView()
@@ -1995,7 +2009,12 @@ class TheNovelistMainWindow(QMainWindow):
             return
 
         # Create dialog
-        dialog = NoteDetailDialog(self)
+        dialog = NoteDetailDialog(
+            note_manager=self.project_manager.note_manager,
+            project_manager=self.project_manager,
+            ai_manager=self.ai_manager,
+            parent=self
+        )
 
         # Load context
         characters = self.project_manager.character_manager.get_all_characters()
@@ -2027,7 +2046,12 @@ class TheNovelistMainWindow(QMainWindow):
             return
 
         # Create dialog
-        dialog = NoteDetailDialog(self)
+        dialog = NoteDetailDialog(
+            note_manager=self.project_manager.note_manager,
+            project_manager=self.project_manager,
+            ai_manager=self.ai_manager,
+            parent=self
+        )
 
         # Load context
         characters = self.project_manager.character_manager.get_all_characters()

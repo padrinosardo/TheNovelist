@@ -38,11 +38,29 @@ class Project:
     tags: List[str] = field(default_factory=list)
     containers_version: str = "1.0"  # Version of container system (Milestone 2)
 
+    # Story context fields - AI Integration (Milestone 1)
+    synopsis: str = ""                      # Plot summary (max 1000 chars)
+    setting_time_period: str = ""           # Time period/era
+    setting_location: str = ""              # Geographic location
+    narrative_tone: str = ""                # Narrative tone
+    narrative_pov: str = ""                 # Point of view (first_person, third_limited, etc.)
+    themes: List[str] = field(default_factory=list)  # Main themes
+    target_audience: str = ""               # Target audience
+    story_notes: str = ""                   # Additional story notes
+
+    # AI Writing Guide (Milestone 2)
+    ai_writing_guide_enabled: bool = False  # Whether AI Writing Guide is enabled
+    ai_writing_guide_content: str = ""      # Markdown content of the Writing Guide
+
+    # AI Custom Commands (Milestone 3)
+    ai_commands: List[dict] = field(default_factory=list)  # Custom AI commands for this project
+
     @classmethod
     def create_new(cls, title: str, author: str, language: str = "it",
                    project_type: ProjectType = ProjectType.NOVEL,
                    genre: str = "", target_word_count: int = 0,
-                   tags: List[str] = None) -> 'Project':
+                   tags: List[str] = None,
+                   include_default_commands: bool = True) -> 'Project':
         """
         Create a new project with current timestamps
 
@@ -54,11 +72,23 @@ class Project:
             genre: Genre/category (optional)
             target_word_count: Target word count (optional)
             tags: List of tags (optional)
+            include_default_commands: Whether to include default AI commands (default: True)
 
         Returns:
             Project: New Project instance
         """
         now = datetime.now().isoformat()
+
+        # Get default AI commands if requested
+        ai_commands = []
+        if include_default_commands:
+            try:
+                from managers.ai.default_commands import get_all_default_commands
+                ai_commands = get_all_default_commands()
+            except ImportError:
+                # If default_commands module is not available, continue without them
+                pass
+
         return cls(
             title=title,
             author=author,
@@ -69,7 +99,8 @@ class Project:
             manuscript_text="",
             genre=genre,
             target_word_count=target_word_count,
-            tags=tags if tags is not None else []
+            tags=tags if tags is not None else [],
+            ai_commands=ai_commands
         )
 
     def update_modified_date(self):
@@ -93,7 +124,21 @@ class Project:
             'genre': self.genre,
             'target_word_count': self.target_word_count,
             'tags': self.tags,
-            'containers_version': self.containers_version
+            'containers_version': self.containers_version,
+            # Story context fields
+            'synopsis': self.synopsis,
+            'setting_time_period': self.setting_time_period,
+            'setting_location': self.setting_location,
+            'narrative_tone': self.narrative_tone,
+            'narrative_pov': self.narrative_pov,
+            'themes': self.themes,
+            'target_audience': self.target_audience,
+            'story_notes': self.story_notes,
+            # AI Writing Guide
+            'ai_writing_guide_enabled': self.ai_writing_guide_enabled,
+            'ai_writing_guide_content': self.ai_writing_guide_content,
+            # AI Custom Commands
+            'ai_commands': self.ai_commands
         }
 
     @classmethod
@@ -126,5 +171,19 @@ class Project:
             genre=data.get('genre', ''),
             target_word_count=data.get('target_word_count', 0),
             tags=data.get('tags', []),
-            containers_version=data.get('containers_version', '1.0')  # Default to 1.0 for old projects
+            containers_version=data.get('containers_version', '1.0'),  # Default to 1.0 for old projects
+            # Story context fields (backward compatible - default to empty)
+            synopsis=data.get('synopsis', ''),
+            setting_time_period=data.get('setting_time_period', ''),
+            setting_location=data.get('setting_location', ''),
+            narrative_tone=data.get('narrative_tone', ''),
+            narrative_pov=data.get('narrative_pov', ''),
+            themes=data.get('themes', []),
+            target_audience=data.get('target_audience', ''),
+            story_notes=data.get('story_notes', ''),
+            # AI Writing Guide (backward compatible)
+            ai_writing_guide_enabled=data.get('ai_writing_guide_enabled', False),
+            ai_writing_guide_content=data.get('ai_writing_guide_content', ''),
+            # AI Custom Commands (backward compatible)
+            ai_commands=data.get('ai_commands', [])
         )

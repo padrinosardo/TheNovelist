@@ -5,8 +5,10 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QLineEdit, QTextEdit, QPushButton, QScrollArea,
                                QFrame, QMessageBox)
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QTextCursor
 from .image_gallery import ImageGalleryWidget
+from .context_sidebar import ContextSidebar, CollapsibleSidebarContainer
+from .ai_chat_widget import AIChatWidget
 from managers.character_manager import CharacterManager
 
 
@@ -20,17 +22,47 @@ class CharacterDetailView(QWidget):
     character_deleted = Signal(str)  # character_id
     back_requested = Signal()
 
-    def __init__(self, character_manager: CharacterManager = None, parent=None):
+    def __init__(self, character_manager: CharacterManager = None, project_manager=None, ai_manager=None, parent=None):
         super().__init__(parent)
         self.character_manager = character_manager
+        self.project_manager = project_manager  # For AI context
+        self.ai_manager = ai_manager  # For AI integration
         self._current_character_id = None
         self._setup_ui()
 
     def _setup_ui(self):
         """Setup the user interface"""
+        # Main layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # Create the main form widget
+        main_form_widget = self._create_main_form()
+
+        # Create the context sidebar with AI chat
+        self.sidebar = ContextSidebar(
+            sidebar_id="character_sidebar",
+            default_width=350,
+            parent=self
+        )
+
+        # Create and add AI Chat Widget
+        self.ai_chat = AIChatWidget(
+            context_type="Character",
+            ai_manager=self.ai_manager,
+            project_manager=self.project_manager,
+            entity_manager=self.character_manager,
+            parent=self
+        )
+        self.ai_chat.text_to_insert.connect(self._on_insert_ai_text)
+        self.sidebar.add_tab(self.ai_chat, "AI Assistant", "🤖")
+
+        # Create container with main form and sidebar
+        container = CollapsibleSidebarContainer(main_form_widget, self.sidebar, parent=self)
+        layout.addWidget(container)
+
+    def _create_main_form(self) -> QWidget:
+        """Create the main form widget"""
         # Scroll area for form
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -134,26 +166,6 @@ class CharacterDetailView(QWidget):
         # Action buttons
         buttons_layout = QHBoxLayout()
 
-        # AI Assistant button (left side)
-        self.ai_assistant_btn = QPushButton("🤖 AI Assistant")
-        self.ai_assistant_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #9C27B0;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                font-size: 14px;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #7B1FA2;
-            }
-        """)
-        self.ai_assistant_btn.setToolTip("Open AI Assistant for character development")
-        self.ai_assistant_btn.clicked.connect(self._on_ai_assistant)
-        buttons_layout.addWidget(self.ai_assistant_btn)
-
         buttons_layout.addStretch()
 
         # Delete button
@@ -197,7 +209,7 @@ class CharacterDetailView(QWidget):
         form_layout.addLayout(buttons_layout)
 
         scroll.setWidget(form_container)
-        layout.addWidget(scroll)
+        return scroll
 
     def set_character_manager(self, character_manager: CharacterManager):
         """
@@ -232,12 +244,40 @@ class CharacterDetailView(QWidget):
         image_paths = self.character_manager.get_character_image_paths(character_id)
         self.image_gallery.load_images(image_paths)
 
+        # Set context for AI chat widget
+        context_data = {
+            'character_id': character_id,
+            'name': character.name,
+            'description': character.description
+        }
+        self.ai_chat.set_context(context_data, entity=character)
+
     def clear_form(self):
         """Clear all form fields"""
         self._current_character_id = None
         self.name_input.clear()
         self.description_input.clear()
         self.image_gallery.load_images([])
+
+    def _on_insert_ai_text(self, text: str):
+        """
+        Insert text from AI chat into description field
+
+        Args:
+            text: Text to insert
+        """
+        # Get current cursor position in description field
+        cursor = self.description_input.textCursor()
+
+        # If there's selected text, replace it
+        if cursor.hasSelection():
+            cursor.removeSelectedText()
+
+        # Insert new text at cursor position
+        cursor.insertText(text)
+
+        # Set focus back to description field
+        self.description_input.setFocus()
 
     def _on_save(self):
         """Handle save button click with validation"""
@@ -335,50 +375,6 @@ class CharacterDetailView(QWidget):
                 "Error",
                 "Could not add image to character."
             )
-
-    def _on_ai_assistant(self):
-        """Open AI Assistant dialog for character development"""
-        if not self.character_manager or not self._current_character_id:
-            QMessageBox.warning(
-                self,
-                "No Character Selected",
-                "Please save the character first before using AI Assistant."
-            )
-            return
-
-        # Get current character
-        character = self.character_manager.get_character(self._current_character_id)
-        if not character:
-            return
-
-        # Import here to avoid circular imports
-        from ui.dialogs.character_ai_assistant_dialog import CharacterAIAssistantDialog
-        from managers.ai import AIManager
-
-        # Initialize AI Manager
-        ai_manager = AIManager()
-
-        # Open dialog
-        dialog = CharacterAIAssistantDialog(character, ai_manager, self)
-
-        if dialog.exec():
-            # Get updated character with conversation history
-            updated_character = dialog.get_updated_character()
-
-            # Save updated conversation history
-            self.character_manager.update_character(
-                self._current_character_id,
-                name=updated_character.name,
-                description=updated_character.description
-            )
-
-            # Update character's conversation history manually (since update_character doesn't handle it)
-            character.ai_conversation_history = updated_character.ai_conversation_history
-
-            # Reload character data (in case AI suggestions were applied)
-            self.load_character(self._current_character_id)
-
-            self.character_updated.emit()
 
     def _on_image_removed(self, filename: str):
         """

@@ -16,19 +16,37 @@ from utils.logger import AppLogger
 class AIWorkerThread(QThread):
     """
     Worker thread for AI generation to avoid blocking UI
+
+    🆕 MILESTONE 3: Usa generate_for_character_with_context per contesto completo
     """
     finished = Signal(object)  # AIResponse
     error = Signal(str)
 
-    def __init__(self, ai_manager: AIManager, messages: List[AIMessage]):
+    def __init__(
+        self,
+        ai_manager: AIManager,
+        character,
+        project,
+        character_manager,
+        messages: List[AIMessage]
+    ):
         super().__init__()
         self.ai_manager = ai_manager
+        self.character = character
+        self.project = project
+        self.character_manager = character_manager
         self.messages = messages
 
     def run(self):
-        """Generate AI response in background"""
+        """Generate AI response in background with full context"""
         try:
-            response = self.ai_manager.generate_for_character(self.messages)
+            # 🆕 Use new method with context!
+            response = self.ai_manager.generate_for_character_with_context(
+                character=self.character,
+                project=self.project,
+                character_manager=self.character_manager,
+                messages=self.messages
+            )
             self.finished.emit(response)
         except Exception as e:
             self.error.emit(str(e))
@@ -46,9 +64,28 @@ class CharacterAIAssistantDialog(QDialog):
     # Signals
     character_updated = Signal(Character)  # Emitted when character should be updated
 
-    def __init__(self, character: Character, ai_manager: AIManager, parent=None):
+    def __init__(
+        self,
+        character: Character,
+        project,
+        character_manager,
+        ai_manager: AIManager,
+        parent=None
+    ):
+        """
+        Initialize Character AI Assistant Dialog
+
+        Args:
+            character: Character to develop
+            project: Project instance (for Story Context)
+            character_manager: CharacterManager (for related characters)
+            ai_manager: AIManager instance
+            parent: Parent widget
+        """
         super().__init__(parent)
         self.character = character
+        self.project = project
+        self.character_manager = character_manager
         self.ai_manager = ai_manager
         self.messages: List[AIMessage] = []
         self.worker_thread: Optional[AIWorkerThread] = None
@@ -326,8 +363,14 @@ class CharacterAIAssistantDialog(QDialog):
         # Disable UI during generation
         self._set_generating(True)
 
-        # Start AI generation in background thread
-        self.worker_thread = AIWorkerThread(self.ai_manager, self.messages.copy())
+        # Start AI generation in background thread (with full context!)
+        self.worker_thread = AIWorkerThread(
+            ai_manager=self.ai_manager,
+            character=self.character,
+            project=self.project,
+            character_manager=self.character_manager,
+            messages=self.messages.copy()
+        )
         self.worker_thread.finished.connect(self._on_ai_response)
         self.worker_thread.error.connect(self._on_ai_error)
         self.worker_thread.start()

@@ -7,11 +7,13 @@ from PySide6.QtWidgets import (
     QMessageBox, QScrollArea, QFrame, QGroupBox, QWidget
 )
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QTextCursor
 from typing import List, Optional
 from models.note import Note
 from models.character import Character
 from models.location import Location
+from ui.components.context_sidebar import ContextSidebar, CollapsibleSidebarContainer
+from ui.components.ai_chat_widget import AIChatWidget
 
 
 class NoteDetailDialog(QDialog):
@@ -19,22 +21,57 @@ class NoteDetailDialog(QDialog):
     Dialog for creating/editing generic notes
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, note_manager=None, project_manager=None, ai_manager=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Note Details")
-        self.setMinimumWidth(600)
+        self.setMinimumWidth(900)
         self.setMinimumHeight(700)
 
         self._current_note: Optional[Note] = None
         self._all_characters: List[Character] = []
         self._all_locations: List[Location] = []
         self._all_scenes: List[tuple] = []  # (scene_id, scene_title)
+        self.note_manager = note_manager
+        self.project_manager = project_manager
+        self.ai_manager = ai_manager
 
         self._setup_ui()
 
     def _setup_ui(self):
         """Setup the UI"""
-        layout = QVBoxLayout(self)
+        # Main layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create the main form widget
+        main_form_widget = self._create_main_form()
+
+        # Create the context sidebar with AI chat
+        self.sidebar = ContextSidebar(
+            sidebar_id="note_sidebar",
+            default_width=350,
+            parent=self
+        )
+
+        # Create and add AI Chat Widget
+        self.ai_chat = AIChatWidget(
+            context_type="Note",
+            ai_manager=self.ai_manager,
+            project_manager=self.project_manager,
+            entity_manager=self.note_manager,
+            parent=self
+        )
+        self.ai_chat.text_to_insert.connect(self._on_insert_ai_text)
+        self.sidebar.add_tab(self.ai_chat, "AI Assistant", "🤖")
+
+        # Create container with main form and sidebar
+        container = CollapsibleSidebarContainer(main_form_widget, self.sidebar, parent=self)
+        main_layout.addWidget(container)
+
+    def _create_main_form(self) -> QWidget:
+        """Create the main form widget"""
+        container = QWidget()
+        layout = QVBoxLayout(container)
         layout.setSpacing(15)
 
         # Scroll area
@@ -183,6 +220,8 @@ class NoteDetailDialog(QDialog):
 
         layout.addLayout(button_layout)
 
+        return container
+
     def load_context(self, characters: List[Character], locations: List[Location], scenes: List[tuple]):
         """
         Load context data (characters, locations, scenes)
@@ -255,6 +294,15 @@ class NoteDetailDialog(QDialog):
 
         self._update_color_preview()
 
+        # Set context for AI chat widget
+        context_data = {
+            'note_id': note.id,
+            'title': note.title,
+            'content': note.content,
+            'tags': note.tags
+        }
+        self.ai_chat.set_context(context_data, entity=note)
+
     def clear_form(self):
         """Clear the form for new note"""
         self._current_note = None
@@ -270,6 +318,26 @@ class NoteDetailDialog(QDialog):
         self.location_combo.setCurrentIndex(0)
 
         self._update_color_preview()
+
+    def _on_insert_ai_text(self, text: str):
+        """
+        Insert text from AI chat into content field
+
+        Args:
+            text: Text to insert
+        """
+        # Get current cursor position in content field
+        cursor = self.content_input.textCursor()
+
+        # If there's selected text, replace it
+        if cursor.hasSelection():
+            cursor.removeSelectedText()
+
+        # Insert new text at cursor position
+        cursor.insertText(text)
+
+        # Set focus back to content field
+        self.content_input.setFocus()
 
     def _update_color_preview(self):
         """Update color preview"""

@@ -258,6 +258,70 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
             max_tokens=max_tokens
         )
 
+    def generate_for_character_with_context(
+        self,
+        character,
+        project,
+        character_manager,
+        messages: List[AIMessage],
+        provider_name: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None
+    ) -> AIResponse:
+        """
+        Generate AI response for character development WITH full dynamic context.
+
+        🆕 MILESTONE 3: Usa ContextBuilder per includere Story Context!
+
+        This method builds a rich context from:
+        - Project metadata (title, author, genre, type)
+        - Story context fields (synopsis, setting, tone, POV, themes, audience)
+        - Character info (name, description)
+        - Related characters for consistency
+
+        Args:
+            character: Character model instance
+            project: Project model instance (with Story Context fields)
+            character_manager: CharacterManager instance for relations
+            messages: Conversation history (List[AIMessage])
+            provider_name: Optional provider name (uses active if None)
+            temperature: Override temperature
+            max_tokens: Override max tokens
+
+        Returns:
+            AIResponse: Generated response with full context
+        """
+        from managers.ai.context_builder import CharacterContextBuilder
+
+        # 1. Build dynamic context using ContextBuilder
+        context_builder = CharacterContextBuilder(project, character_manager)
+        context = context_builder.build_full_context(character)
+
+        # 2. Create enhanced system prompt: base prompt + dynamic context
+        system_prompt = f"""{self.CHARACTER_SYSTEM_PROMPT}
+
+---
+
+{context}
+"""
+
+        # 3. Call provider with enriched context
+        provider = self.get_provider(provider_name)
+
+        if not provider:
+            return AIResponse(
+                content="",
+                success=False,
+                error="No AI provider available. Please configure an API key in settings."
+            )
+
+        return provider.generate(
+            messages=messages,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+
     def get_config(self) -> Dict[str, Any]:
         """
         Get current configuration

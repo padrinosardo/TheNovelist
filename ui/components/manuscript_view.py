@@ -4,10 +4,12 @@ Manuscript View - Text editor with analysis panels
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
                                QGroupBox, QLabel, QPushButton)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QTextCursor
 from ui.pannels import TextEditor, ResultsPanel
 from ui.styles import Stili
 from ui.components.find_replace_dialog import FindReplaceDialog
+from ui.components.context_sidebar import ContextSidebar
+from ui.components.ai_chat_widget import AIChatWidget
 from typing import Optional
 
 
@@ -24,11 +26,14 @@ class ManuscriptView(QWidget):
     previous_scene_requested = Signal()
     next_scene_requested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, manuscript_manager=None, project_manager=None, ai_manager=None, parent=None):
         super().__init__(parent)
         self._current_scene_id: Optional[str] = None
         self._current_chapter_title: str = ""
         self._current_scene_title: str = ""
+        self.manuscript_manager = manuscript_manager
+        self.project_manager = project_manager
+        self.ai_manager = ai_manager
         self._setup_ui()
         self._analysis_visible = True
         self.find_dialog = None  # Lazy initialization
@@ -163,34 +168,59 @@ class ManuscriptView(QWidget):
         if self._current_scene_id:
             self.scene_content_changed.emit(self._current_scene_id, text)
 
-    def _create_analysis_panel(self):
-        """Create the analysis results panel"""
-        widget = QWidget()
-        layout = QVBoxLayout()
-        widget.setLayout(layout)
+    def _on_insert_ai_text(self, text: str):
+        """
+        Insert text from AI chat into editor
 
-        # Vertical splitter for analysis panels
-        analysis_splitter = QSplitter(Qt.Orientation.Vertical)
+        Args:
+            text: Text to insert
+        """
+        # Get current cursor position in editor
+        cursor = self.editor.editor.textCursor()
+
+        # If there's selected text, replace it
+        if cursor.hasSelection():
+            cursor.removeSelectedText()
+
+        # Insert new text at cursor position
+        cursor.insertText(text)
+
+        # Set focus back to editor
+        self.editor.editor.setFocus()
+
+    def _create_analysis_panel(self):
+        """Create the analysis results panel with sidebar"""
+        # Create the context sidebar
+        self.sidebar = ContextSidebar(
+            sidebar_id="manuscript_sidebar",
+            default_width=350,
+            parent=self
+        )
+
+        # Create and add AI Chat Widget
+        self.ai_chat = AIChatWidget(
+            context_type="Scene",
+            ai_manager=self.ai_manager,
+            project_manager=self.project_manager,
+            entity_manager=self.manuscript_manager,
+            parent=self
+        )
+        self.ai_chat.text_to_insert.connect(self._on_insert_ai_text)
+        self.sidebar.add_tab(self.ai_chat, "AI Assistant", "🤖")
 
         # Grammar panel
         self.grammar_panel = ResultsPanel("Grammar", "📖")
-        analysis_splitter.addWidget(self.grammar_panel)
+        self.sidebar.add_tab(self.grammar_panel, "Grammar", "📖")
 
         # Repetitions panel
         self.repetitions_panel = ResultsPanel("Repetitions", "🔄")
-        analysis_splitter.addWidget(self.repetitions_panel)
+        self.sidebar.add_tab(self.repetitions_panel, "Repetitions", "🔄")
 
         # Style panel
         self.style_panel = ResultsPanel("Style", "✍️")
-        analysis_splitter.addWidget(self.style_panel)
+        self.sidebar.add_tab(self.style_panel, "Style", "✍️")
 
-        # Equal proportions
-        for i in range(3):
-            analysis_splitter.setStretchFactor(i, 1)
-
-        layout.addWidget(analysis_splitter)
-
-        return widget
+        return self.sidebar
 
     def get_text(self) -> str:
         """
@@ -200,6 +230,16 @@ class ManuscriptView(QWidget):
             str: Current manuscript text
         """
         return self.editor.get_text()
+
+    def get_selected_text(self) -> str:
+        """
+        Get selected text in the editor
+
+        Returns:
+            str: Selected text, or empty string if no selection
+        """
+        cursor = self.editor.editor.textCursor()
+        return cursor.selectedText()
 
     def set_text(self, text: str):
         """
@@ -255,6 +295,16 @@ class ManuscriptView(QWidget):
 
         # Reconnect signal
         self.editor.editor.textChanged.connect(self._on_editor_text_changed)
+
+        # Set context for AI chat widget
+        context_data = {
+            'scene_id': scene_id,
+            'chapter_title': chapter_title,
+            'scene_title': scene_title,
+            'content': content
+        }
+        # For scenes, entity is the scene_data dict itself
+        self.ai_chat.set_context(context_data, entity=context_data)
 
     def get_current_scene_id(self) -> Optional[str]:
         """

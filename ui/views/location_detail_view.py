@@ -7,10 +7,12 @@ from PySide6.QtWidgets import (
     QFrame, QListWidget, QListWidgetItem, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QPixmap
+from PySide6.QtGui import QFont, QPixmap, QTextCursor
 from typing import List, Optional
 from models.location import Location
 from models.character import Character
+from ui.components.context_sidebar import ContextSidebar, CollapsibleSidebarContainer
+from ui.components.ai_chat_widget import AIChatWidget
 import os
 
 
@@ -23,20 +25,50 @@ class LocationDetailView(QWidget):
     save_requested = Signal(Location)  # Updated location
     cancel_requested = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, location_manager=None, project_manager=None, ai_manager=None, parent=None):
         super().__init__(parent)
         self._current_location: Optional[Location] = None
         self._all_locations: List[Location] = []
         self._all_characters: List[Character] = []
         self._images_to_add: List[str] = []  # Paths to new images
+        self.location_manager = location_manager
+        self.project_manager = project_manager
+        self.ai_manager = ai_manager
         self._setup_ui()
 
     def _setup_ui(self):
         """Setup the UI"""
+        # Main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
 
+        # Create the main form widget
+        main_form_widget = self._create_main_form()
+
+        # Create the context sidebar with AI chat
+        self.sidebar = ContextSidebar(
+            sidebar_id="location_sidebar",
+            default_width=350,
+            parent=self
+        )
+
+        # Create and add AI Chat Widget
+        self.ai_chat = AIChatWidget(
+            context_type="Location",
+            ai_manager=self.ai_manager,
+            project_manager=self.project_manager,
+            entity_manager=self.location_manager,
+            parent=self
+        )
+        self.ai_chat.text_to_insert.connect(self._on_insert_ai_text)
+        self.sidebar.add_tab(self.ai_chat, "AI Assistant", "🤖")
+
+        # Create container with main form and sidebar
+        container = CollapsibleSidebarContainer(main_form_widget, self.sidebar, parent=self)
+        main_layout.addWidget(container)
+
+    def _create_main_form(self) -> QWidget:
+        """Create the main form widget"""
         # Scroll area for long content
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -170,7 +202,14 @@ class LocationDetailView(QWidget):
         layout.addStretch()
 
         scroll.setWidget(scroll_widget)
-        main_layout.addWidget(scroll)
+
+        # Container widget for scroll + buttons
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        container_layout.addWidget(scroll)
 
         # === BUTTONS ===
         button_layout = QHBoxLayout()
@@ -201,7 +240,9 @@ class LocationDetailView(QWidget):
         self.save_btn.clicked.connect(self._on_save_clicked)
         button_layout.addWidget(self.save_btn)
 
-        main_layout.addLayout(button_layout)
+        container_layout.addLayout(button_layout)
+
+        return container
 
     def load_context(self, all_locations: List[Location], all_characters: List[Character]):
         """
@@ -258,6 +299,15 @@ class LocationDetailView(QWidget):
             if char_id in location.characters_present:
                 item.setSelected(True)
 
+        # Set context for AI chat widget
+        context_data = {
+            'location_id': location.id,
+            'name': location.name,
+            'type': location.location_type or '',
+            'description': location.description
+        }
+        self.ai_chat.set_context(context_data, entity=location)
+
     def clear_form(self):
         """Clear the form for new location"""
         self._current_location = None
@@ -274,6 +324,26 @@ class LocationDetailView(QWidget):
         # Clear character selection
         for i in range(self.characters_list.count()):
             self.characters_list.item(i).setSelected(False)
+
+    def _on_insert_ai_text(self, text: str):
+        """
+        Insert text from AI chat into description field
+
+        Args:
+            text: Text to insert
+        """
+        # Get current cursor position in description field
+        cursor = self.description_input.textCursor()
+
+        # If there's selected text, replace it
+        if cursor.hasSelection():
+            cursor.removeSelectedText()
+
+        # Insert new text at cursor position
+        cursor.insertText(text)
+
+        # Set focus back to description field
+        self.description_input.setFocus()
 
     def _update_parent_combo(self, exclude_id: str = None):
         """
