@@ -48,6 +48,12 @@ it_core_news_lg/
 *.sqlite
 config.ini
 
+# Distribution files
+*.dmg
+*.zip
+add_commands_*.py
+replacements.txt
+
 # Test files
 test_*.py
 test_export.*
