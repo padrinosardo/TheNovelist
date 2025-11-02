@@ -475,3 +475,57 @@ class ManuscriptView(QWidget):
                 scene.notes = notes
                 # Emit text_changed to trigger save
                 self.text_changed.emit()
+
+    def update_custom_dictionary(self):
+        """
+        Update the spell checker's custom dictionary with project-specific terms
+        (character names, location names, etc.)
+        """
+        if not self.project_manager:
+            return
+
+        custom_words = []
+
+        # Add character names
+        if hasattr(self.project_manager, 'characters_manager') and self.project_manager.characters_manager:
+            characters = self.project_manager.characters_manager.get_all_characters()
+            for character in characters:
+                # Add full name and first/last names separately
+                if character.name:
+                    custom_words.append(character.name)
+                    # Split name into parts
+                    name_parts = character.name.split()
+                    custom_words.extend(name_parts)
+
+        # Add location names
+        if hasattr(self.project_manager, 'location_manager') and self.project_manager.location_manager:
+            locations = self.project_manager.location_manager.get_all_locations()
+            for location in locations:
+                if location.name:
+                    custom_words.append(location.name)
+                    # Split location name into parts
+                    name_parts = location.name.split()
+                    custom_words.extend(name_parts)
+
+        # Add worldbuilding entry titles
+        if hasattr(self.project_manager, 'worldbuilding_manager') and self.project_manager.worldbuilding_manager:
+            entries = self.project_manager.worldbuilding_manager.get_all_entries()
+            for entry in entries:
+                if entry.title:
+                    custom_words.append(entry.title)
+                    # Also add tags
+                    if entry.tags:
+                        custom_words.extend(entry.tags)
+
+        # Update the spell checker dictionary
+        if custom_words:
+            self.editor.editor.add_words_to_dictionary(custom_words)
+
+    def set_spell_check_language(self, language: str):
+        """
+        Set the spell checking language
+
+        Args:
+            language: Language code (e.g., 'it', 'en', 'es')
+        """
+        self.editor.editor.set_language(language)

@@ -18,6 +18,8 @@ from .scenes_preview_widget import ScenesPreviewWidget
 from .chapter_detail_widget import ChapterDetailWidget
 from .worldbuilding_list_view import WorldbuildingListView
 from .worldbuilding_detail_view import WorldbuildingDetailView
+from .spell_check_highlighter import SpellCheckHighlighter
+from .spell_check_text_edit import SpellCheckTextEdit
 
 __all__ = [
     'MenuBar',
@@ -37,5 +39,7 @@ __all__ = [
     'ScenesPreviewWidget',
     'ChapterDetailWidget',
     'WorldbuildingListView',
-    'WorldbuildingDetailView'
+    'WorldbuildingDetailView',
+    'SpellCheckHighlighter',
+    'SpellCheckTextEdit'
 ]

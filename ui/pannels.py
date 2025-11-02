@@ -98,11 +98,20 @@ class TextEditor(QFrame):
         self.counter_info.setStyleSheet("color: #666; padding: 5px;")
         layout.addWidget(self.counter_info)
 
-        # Main editor
-        self.editor = QTextEdit()
+        # Main editor with spell checking
+        # Lazy import to avoid circular dependency
+        try:
+            from ui.components.spell_check_text_edit import SpellCheckTextEdit
+            self.editor = SpellCheckTextEdit()
+            # Enable spell checking by default (language will be set when project loads)
+            self.editor.enable_spell_checking('it')
+        except ImportError:
+            # Fallback to standard QTextEdit if import fails
+            self.editor = QTextEdit()
+
         self.editor.setPlaceholderText(
             "Start writing your text here...\n\n"
-            "Grammar errors will be highlighted."
+            "Grammar and spelling errors will be highlighted."
         )
 
         # Connect signals
@@ -112,11 +121,11 @@ class TextEditor(QFrame):
         layout.addWidget(self.editor)
 
         # Legend
-        legend = QLabel("  🔴 Grammar  🟠 Apostrophes  🔵 Punctuation  ")
+        legend = QLabel("  🔴 Spelling & Grammar  🟠 Apostrophes  🔵 Punctuation  ")
         legend.setStyleSheet("""
-            background-color: #f8f9fa; 
-            color: #6c757d; 
-            font-size: 10px; 
+            background-color: #f8f9fa;
+            color: #6c757d;
+            font-size: 10px;
             padding: 5px 10px;
             border-top: 1px solid #dee2e6;
         """)
