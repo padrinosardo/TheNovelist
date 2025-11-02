@@ -11,11 +11,19 @@ Supported Languages:
     - fr: French
     - de: German
 """
+import os
+import sys
 import spacy
 import language_tool_python
 import textstat
 from typing import Optional, Dict
 from utils.logger import AppLogger
+
+# PyInstaller compatibility
+if getattr(sys, 'frozen', False):
+    BASE_PATH = sys._MEIPASS
+else:
+    BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class NLPModelManager:
@@ -133,7 +141,29 @@ class NLPModelManager:
 
         try:
             AppLogger.info(f"Loading spaCy model: {model_name}")
-            nlp = spacy.load(model_name)
+
+            # Try standard load first (works in dev environment)
+            try:
+                nlp = spacy.load(model_name)
+            except OSError:
+                # If running in PyInstaller bundle, try loading from extracted path
+                if getattr(sys, 'frozen', False):
+                    # Map model names to their bundle paths
+                    model_paths = {
+                        'it_core_news_sm': os.path.join(BASE_PATH, 'it_core_news_sm', 'it_core_news_sm-3.8.0'),
+                        'en_core_web_sm': os.path.join(BASE_PATH, 'en_core_web_sm', 'en_core_web_sm-3.8.0'),
+                        # Add other models as needed
+                    }
+
+                    model_path = model_paths.get(model_name)
+                    if model_path and os.path.exists(model_path):
+                        AppLogger.info(f"Loading from bundle path: {model_path}")
+                        nlp = spacy.load(model_path)
+                    else:
+                        raise OSError(f"Model {model_name} not found in bundle")
+                else:
+                    raise
+
             self._spacy_models[lang] = nlp
             AppLogger.info(f"✓ spaCy model loaded successfully: {model_name}")
             return nlp
