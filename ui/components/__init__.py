@@ -16,6 +16,8 @@ from .quick_scene_dialog import QuickSceneDialog
 from .chapters_preview_widget import ChaptersPreviewWidget
 from .scenes_preview_widget import ScenesPreviewWidget
 from .chapter_detail_widget import ChapterDetailWidget
+from .worldbuilding_list_view import WorldbuildingListView
+from .worldbuilding_detail_view import WorldbuildingDetailView
 
 __all__ = [
     'MenuBar',
@@ -33,5 +35,7 @@ __all__ = [
     'QuickSceneDialog',
     'ChaptersPreviewWidget',
     'ScenesPreviewWidget',
-    'ChapterDetailWidget'
+    'ChapterDetailWidget',
+    'WorldbuildingListView',
+    'WorldbuildingDetailView'
 ]

@@ -9,7 +9,7 @@ from PySide6.QtGui import QCloseEvent
 from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            ManuscriptView, CharactersListView, CharacterDetailView,
                            StatisticsDashboard, ChaptersPreviewWidget, ScenesPreviewWidget,
-                           ChapterDetailWidget)
+                           ChapterDetailWidget, WorldbuildingListView, WorldbuildingDetailView)
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
                       NotesListView, ProjectInfoDetailView)
@@ -124,6 +124,8 @@ class TheNovelistMainWindow(QMainWindow):
         self.research_list_view = ResearchListView()
         self.research_detail_view = ResearchDetailView()
         self.timeline_view = TimelineView()
+        self.worldbuilding_list_view = WorldbuildingListView()
+        self.worldbuilding_detail_view = WorldbuildingDetailView()
         self.sources_list_view = SourcesListView()
         self.notes_list_view = NotesListView()
 
@@ -142,6 +144,8 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace.add_view(WorkspaceContainer.VIEW_LOCATIONS, self.location_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_RESEARCH, self.research_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_TIMELINE, self.timeline_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_WORLDBUILDING, self.worldbuilding_list_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_WORLDBUILDING_DETAIL, self.worldbuilding_detail_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_SOURCES, self.sources_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_NOTES, self.notes_list_view)
 
@@ -240,6 +244,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.locations_selected.connect(self._show_locations)
         self.project_tree.research_selected.connect(self._show_research)
         self.project_tree.timeline_selected.connect(self._show_timeline)
+        self.project_tree.worldbuilding_selected.connect(self._show_worldbuilding)
         self.project_tree.sources_selected.connect(self._show_sources)
         self.project_tree.notes_selected.connect(self._show_notes)
 
@@ -310,6 +315,13 @@ class TheNovelistMainWindow(QMainWindow):
         self.research_list_view.delete_research_requested.connect(self._delete_research_note)
         self.research_detail_view.save_requested.connect(self._save_research_note)
         self.research_detail_view.cancel_requested.connect(self._show_research)
+
+        # Worldbuilding view signals
+        self.worldbuilding_list_view.entry_selected.connect(self._show_worldbuilding_detail)
+        self.worldbuilding_list_view.entry_added.connect(self._add_worldbuilding_entry)
+        self.worldbuilding_detail_view.entry_saved.connect(self._on_worldbuilding_saved)
+        self.worldbuilding_detail_view.entry_deleted.connect(self._on_worldbuilding_deleted)
+        self.worldbuilding_detail_view.back_requested.connect(self._show_worldbuilding)
 
         # Timeline view signals
         self.timeline_view.add_event_requested.connect(self._add_timeline_event)
@@ -2092,6 +2104,56 @@ class TheNovelistMainWindow(QMainWindow):
             self.is_modified = True
             self._update_window_title()
             self.statusBar().showMessage("Timeline event deleted", 3000)
+
+    def _show_worldbuilding(self):
+        """Show worldbuilding list view"""
+        if not self.project_manager.has_project():
+            return
+
+        self.worldbuilding_list_view.load_worldbuilding(
+            self.project_manager.container_manager,
+            self.project_manager.worldbuilding_manager
+        )
+        self.workspace.show_view(WorkspaceContainer.VIEW_WORLDBUILDING)
+
+    def _show_worldbuilding_detail(self, entry_id: str):
+        """Show worldbuilding detail view for editing"""
+        if not self.project_manager.has_project():
+            return
+
+        self.worldbuilding_detail_view.set_managers(
+            self.project_manager.container_manager,
+            self.project_manager.worldbuilding_manager
+        )
+        self.worldbuilding_detail_view.load_entry(entry_id)
+        self.workspace.show_view(WorkspaceContainer.VIEW_WORLDBUILDING_DETAIL)
+
+    def _add_worldbuilding_entry(self):
+        """Add a new worldbuilding entry"""
+        if not self.project_manager.has_project():
+            QMessageBox.warning(self, "No Project", "Please create or open a project first.")
+            return
+
+        self.worldbuilding_detail_view.set_managers(
+            self.project_manager.container_manager,
+            self.project_manager.worldbuilding_manager
+        )
+        self.worldbuilding_detail_view.new_entry()
+        self.workspace.show_view(WorkspaceContainer.VIEW_WORLDBUILDING_DETAIL)
+
+    def _on_worldbuilding_saved(self):
+        """Handle worldbuilding entry saved"""
+        self._show_worldbuilding()
+        self.is_modified = True
+        self._update_window_title()
+        self.statusBar().showMessage("Worldbuilding entry saved", 3000)
+
+    def _on_worldbuilding_deleted(self, entry_id: str):
+        """Handle worldbuilding entry deleted"""
+        self._show_worldbuilding()
+        self.is_modified = True
+        self._update_window_title()
+        self.statusBar().showMessage("Worldbuilding entry deleted", 3000)
 
     def _show_sources(self):
         """Show sources list view"""

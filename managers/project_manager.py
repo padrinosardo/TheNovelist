@@ -21,6 +21,7 @@ from managers.research_manager import ResearchManager
 from managers.timeline_manager import TimelineManager
 from managers.source_manager import SourceManager
 from managers.note_manager import NoteManager
+from managers.worldbuilding_manager import WorldbuildingManager
 from utils.logger import AppLogger
 from utils.error_handler import ErrorHandler
 from utils.backup_manager import BackupManager
@@ -51,6 +52,7 @@ class ProjectManager:
         self.location_manager: Optional[LocationManager] = None
         self.research_manager: Optional[ResearchManager] = None
         self.timeline_manager: Optional[TimelineManager] = None
+        self.worldbuilding_manager: Optional[WorldbuildingManager] = None
         self.source_manager: Optional[SourceManager] = None
         self.note_manager: Optional[NoteManager] = None
 
@@ -318,6 +320,7 @@ class ProjectManager:
             self.location_manager = LocationManager(self.container_manager, images_dir)
             self.research_manager = ResearchManager(self.container_manager)
             self.timeline_manager = TimelineManager(self.container_manager)
+            self.worldbuilding_manager = WorldbuildingManager(self.container_manager)
             self.source_manager = SourceManager(self.container_manager)
             self.note_manager = NoteManager(self.container_manager)
 

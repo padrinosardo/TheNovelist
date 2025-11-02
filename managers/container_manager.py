@@ -12,6 +12,7 @@ from models.timeline_event import TimelineEvent
 from models.source import Source
 from models.note import Note
 from models.character import Character
+from models.worldbuilding_entry import WorldbuildingEntry
 from utils.logger import logger
 from datetime import datetime
 
@@ -36,6 +37,7 @@ class ContainerManager:
         ContainerType.LOCATIONS: Location,
         ContainerType.RESEARCH: ResearchNote,
         ContainerType.TIMELINE: TimelineEvent,
+        ContainerType.WORLDBUILDING: WorldbuildingEntry,
         ContainerType.SOURCES: Source,
         ContainerType.NOTES: Note
     }

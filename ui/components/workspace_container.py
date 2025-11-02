@@ -30,6 +30,8 @@ class WorkspaceContainer(QStackedWidget):
     VIEW_LOCATIONS = "locations"
     VIEW_RESEARCH = "research"
     VIEW_TIMELINE = "timeline"
+    VIEW_WORLDBUILDING = "worldbuilding"
+    VIEW_WORLDBUILDING_DETAIL = "worldbuilding_detail"
     VIEW_SOURCES = "sources"
     VIEW_NOTES = "notes"
 
