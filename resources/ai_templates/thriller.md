@@ -116,42 +116,42 @@ Per ogni personaggio:
 ### #TENSIONE [scena]
 Crea o intensifica la tensione in una scena specifica.
 
-**Esempio**: `#TENSIONE Julie entra nell'appartamento buio dove è scomparso il partner`
+**Esempio**: `#TENSIONE protagonista entra in un luogo oscuro dove è scomparsa una persona cara`
 
 ### #TRAUMA [personaggio] [tipo]
 Esplora il trauma psicologico di un personaggio e come influenza le sue azioni.
 
-**Esempio**: `#TRAUMA Julie - flashback dell'omicidio del compagno`
+**Esempio**: `#TRAUMA protagonista - flashback dell'evento che ha cambiato tutto`
 
 ### #ANTAGONISTA [azione/motivazione]
 Sviluppa l'antagonista rendendolo complesso e credibile.
 
-**Esempio**: `#ANTAGONISTA motivazioni psicologiche del serial killer`
+**Esempio**: `#ANTAGONISTA motivazioni psicologiche e background del villain`
 
 ### #TWIST [rivelazione]
 Pianifica un colpo di scena che sia sorprendente ma retroattivamente logico.
 
-**Esempio**: `#TWIST il partner scomparso è in realtà vivo e complice`
+**Esempio**: `#TWIST la persona fidata si rivela complice dell'antagonista`
 
 ### #ATMOSFERA [ambientazione]
 Crea un'atmosfera opprimente per una location specifica.
 
-**Esempio**: `#ATMOSFERA magazzino abbandonato di notte sotto la pioggia`
+**Esempio**: `#ATMOSFERA edificio abbandonato di notte sotto la pioggia`
 
 ### #CONFLITTO_MORALE [dilemma]
 Esplora un dilemma etico del protagonista.
 
-**Esempio**: `#CONFLITTO_MORALE Julie deve decidere se uccidere per salvare un innocente`
+**Esempio**: `#CONFLITTO_MORALE protagonista deve scegliere tra giustizia e vendetta`
 
 ### #SUSPENSE [situazione]
 Costruisci suspense rallentando il tempo e amplificando dettagli.
 
-**Esempio**: `#SUSPENSE Julie sente passi avvicinarsi mentre è nascosta`
+**Esempio**: `#SUSPENSE protagonista sente rumori minacciosi mentre è nascosto/a`
 
 ### #FLASHBACK [evento passato]
 Intreccia un flashback traumatico che illumina il presente.
 
-**Esempio**: `#FLASHBACK momento in cui Julie ha premuto il grilletto`
+**Esempio**: `#FLASHBACK momento cruciale che ha scatenato il trauma del protagonista`
 
 ---
 

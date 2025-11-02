@@ -147,7 +147,7 @@ Sviluppa una tecnologia con funzionamento e conseguenze.
 ### #ALIENO [specie]
 Crea una specie aliena con biologia e cultura uniche.
 
-**Esempio**: `#ALIENO i Vorlon - comunicazione non-verbale e biologia al silicio`
+**Esempio**: `#ALIENO specie aliena - comunicazione alternativa e biologia non carbonio`
 
 ### #MONDO [pianeta/stazione]
 Dettagli su un luogo nell'universo.

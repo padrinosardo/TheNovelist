@@ -48,6 +48,10 @@ class ProjectTree(QTreeWidget):
     add_character_requested = Signal()
     delete_character_requested = Signal(str)  # character_id
 
+    # Reordering operations
+    chapters_reordered = Signal(list)  # list of chapter_ids in new order
+    scenes_reordered = Signal(str, list)  # chapter_id, list of scene_ids in new order
+
     # Dynamic container operations
     add_location_requested = Signal()
     add_research_note_requested = Signal()
@@ -73,6 +77,12 @@ class ProjectTree(QTreeWidget):
         self.itemClicked.connect(self._on_item_clicked)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
+
+        # Enable drag & drop for reordering
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QTreeWidget.DragDropMode.InternalMove)
+        self.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         # Style
         self.setStyleSheet("""
@@ -292,6 +302,33 @@ class ProjectTree(QTreeWidget):
             )
             menu.addAction(rename_action)
 
+            menu.addSeparator()
+
+            # Submenu Sposta
+            move_menu = QMenu("Sposta", self)
+
+            move_up_action = QAction("⬆️ Sposta Su", self)
+            move_up_action.triggered.connect(lambda: self._move_chapter(chapter_id, "up"))
+            move_menu.addAction(move_up_action)
+
+            move_down_action = QAction("⬇️ Sposta Giù", self)
+            move_down_action.triggered.connect(lambda: self._move_chapter(chapter_id, "down"))
+            move_menu.addAction(move_down_action)
+
+            move_menu.addSeparator()
+
+            move_top_action = QAction("⏫ Sposta all'Inizio", self)
+            move_top_action.triggered.connect(lambda: self._move_chapter(chapter_id, "top"))
+            move_menu.addAction(move_top_action)
+
+            move_bottom_action = QAction("⏬ Sposta alla Fine", self)
+            move_bottom_action.triggered.connect(lambda: self._move_chapter(chapter_id, "bottom"))
+            move_menu.addAction(move_bottom_action)
+
+            menu.addMenu(move_menu)
+
+            menu.addSeparator()
+
             delete_action = QAction("Delete Chapter", self)
             delete_action.triggered.connect(
                 lambda: self.delete_chapter_requested.emit(chapter_id)
@@ -307,6 +344,33 @@ class ProjectTree(QTreeWidget):
                 lambda: self.rename_scene_requested.emit(scene_id)
             )
             menu.addAction(rename_action)
+
+            menu.addSeparator()
+
+            # Submenu Sposta
+            move_menu = QMenu("Sposta", self)
+
+            move_up_action = QAction("⬆️ Sposta Su", self)
+            move_up_action.triggered.connect(lambda: self._move_scene(scene_id, "up"))
+            move_menu.addAction(move_up_action)
+
+            move_down_action = QAction("⬇️ Sposta Giù", self)
+            move_down_action.triggered.connect(lambda: self._move_scene(scene_id, "down"))
+            move_menu.addAction(move_down_action)
+
+            move_menu.addSeparator()
+
+            move_top_action = QAction("⏫ Sposta all'Inizio", self)
+            move_top_action.triggered.connect(lambda: self._move_scene(scene_id, "top"))
+            move_menu.addAction(move_top_action)
+
+            move_bottom_action = QAction("⏬ Sposta alla Fine", self)
+            move_bottom_action.triggered.connect(lambda: self._move_scene(scene_id, "bottom"))
+            move_menu.addAction(move_bottom_action)
+
+            menu.addMenu(move_menu)
+
+            menu.addSeparator()
 
             delete_action = QAction("Delete Scene", self)
             delete_action.triggered.connect(
@@ -368,6 +432,57 @@ class ProjectTree(QTreeWidget):
 
         if not menu.isEmpty():
             menu.exec(self.viewport().mapToGlobal(position))
+
+    def dropEvent(self, event):
+        """Handle drop event for reordering chapters and scenes"""
+        # Get dragged item and target
+        dragged_item = self.currentItem()
+        if not dragged_item:
+            event.ignore()
+            return
+
+        drop_indicator = self.dropIndicatorPosition()
+        target_item = self.itemAt(event.position().toPoint())
+
+        if not target_item:
+            event.ignore()
+            return
+
+        # Get item types
+        dragged_type = dragged_item.data(0, Qt.ItemDataRole.UserRole)
+        target_type = target_item.data(0, Qt.ItemDataRole.UserRole)
+
+        if not dragged_type or not target_type:
+            event.ignore()
+            return
+
+        # CASE 1: Moving a chapter
+        if isinstance(dragged_type, str) and dragged_type.startswith("chapter:") and \
+           isinstance(target_type, str) and target_type.startswith("chapter:"):
+            # Calculate new chapter order
+            new_order = self._calculate_chapters_order(dragged_item, target_item, drop_indicator)
+            if new_order:
+                self.chapters_reordered.emit(new_order)
+                event.accept()
+                return
+
+        # CASE 2: Moving a scene (only within same chapter)
+        if isinstance(dragged_type, str) and dragged_type.startswith("scene:") and \
+           isinstance(target_type, str) and target_type.startswith("scene:"):
+            # Check if they belong to the same chapter
+            dragged_parent = dragged_item.parent()
+            target_parent = target_item.parent()
+
+            if dragged_parent == target_parent:
+                chapter_id = dragged_parent.data(0, Qt.ItemDataRole.UserRole).split(":")[1]
+                new_order = self._calculate_scenes_order(dragged_item, target_item, drop_indicator, dragged_parent)
+                if new_order:
+                    self.scenes_reordered.emit(chapter_id, new_order)
+                    event.accept()
+                    return
+
+        # If we get here, the drop is not allowed
+        event.ignore()
 
     def clear_project(self):
         """Clear the tree (when no project is open)"""
@@ -472,3 +587,150 @@ class ProjectTree(QTreeWidget):
                 scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
 
         manuscript_node.setExpanded(True)
+
+    def _calculate_chapters_order(self, dragged_item, target_item, drop_indicator):
+        """Calculate new chapter order after drop"""
+        manuscript_node = dragged_item.parent()
+        if not manuscript_node:
+            return None
+
+        chapter_ids = []
+
+        for i in range(manuscript_node.childCount()):
+            chapter_item = manuscript_node.child(i)
+            if chapter_item == dragged_item:
+                continue
+
+            chapter_type = chapter_item.data(0, Qt.ItemDataRole.UserRole)
+            if not chapter_type or not isinstance(chapter_type, str):
+                continue
+
+            chapter_id = chapter_type.split(":")[1]
+
+            # Insert dragged_item at the correct position
+            if chapter_item == target_item:
+                if drop_indicator == QTreeWidget.DropIndicatorPosition.AboveItem:
+                    dragged_id = dragged_item.data(0, Qt.ItemDataRole.UserRole).split(":")[1]
+                    chapter_ids.append(dragged_id)
+                    chapter_ids.append(chapter_id)
+                else:
+                    chapter_ids.append(chapter_id)
+                    dragged_id = dragged_item.data(0, Qt.ItemDataRole.UserRole).split(":")[1]
+                    chapter_ids.append(dragged_id)
+            else:
+                chapter_ids.append(chapter_id)
+
+        return chapter_ids if chapter_ids else None
+
+    def _calculate_scenes_order(self, dragged_item, target_item, drop_indicator, chapter_node):
+        """Calculate new scene order after drop"""
+        if not chapter_node:
+            return None
+
+        scene_ids = []
+
+        for i in range(chapter_node.childCount()):
+            scene_item = chapter_node.child(i)
+            if scene_item == dragged_item:
+                continue
+
+            scene_type = scene_item.data(0, Qt.ItemDataRole.UserRole)
+            if not scene_type or not isinstance(scene_type, str):
+                continue
+
+            scene_id = scene_type.split(":")[1]
+
+            # Insert dragged_item at the correct position
+            if scene_item == target_item:
+                if drop_indicator == QTreeWidget.DropIndicatorPosition.AboveItem:
+                    dragged_id = dragged_item.data(0, Qt.ItemDataRole.UserRole).split(":")[1]
+                    scene_ids.append(dragged_id)
+                    scene_ids.append(scene_id)
+                else:
+                    scene_ids.append(scene_id)
+                    dragged_id = dragged_item.data(0, Qt.ItemDataRole.UserRole).split(":")[1]
+                    scene_ids.append(dragged_id)
+            else:
+                scene_ids.append(scene_id)
+
+        return scene_ids if scene_ids else None
+
+    def _move_chapter(self, chapter_id: str, direction: str):
+        """Move chapter in a specific direction"""
+        if not self._manuscript_structure:
+            return
+
+        # Find current index
+        current_index = -1
+        for i, chapter in enumerate(self._manuscript_structure.chapters):
+            if chapter.id == chapter_id:
+                current_index = i
+                break
+
+        if current_index == -1:
+            return
+
+        # Calculate new index
+        total = len(self._manuscript_structure.chapters)
+        new_index = current_index
+
+        if direction == "up" and current_index > 0:
+            new_index = current_index - 1
+        elif direction == "down" and current_index < total - 1:
+            new_index = current_index + 1
+        elif direction == "top":
+            new_index = 0
+        elif direction == "bottom":
+            new_index = total - 1
+
+        if new_index == current_index:
+            return
+
+        # Create new order
+        chapters = self._manuscript_structure.chapters.copy()
+        chapters.insert(new_index, chapters.pop(current_index))
+        new_order = [ch.id for ch in chapters]
+
+        self.chapters_reordered.emit(new_order)
+
+    def _move_scene(self, scene_id: str, direction: str):
+        """Move scene in a specific direction (within same chapter)"""
+        if not self._manuscript_structure:
+            return
+
+        # Find chapter and scene
+        chapter = self._manuscript_structure.get_chapter_for_scene(scene_id)
+        if not chapter:
+            return
+
+        current_index = -1
+        for i, scene in enumerate(chapter.scenes):
+            if scene.id == scene_id:
+                current_index = i
+                break
+
+        if current_index == -1:
+            return
+
+        # Calculate new index
+        total = len(chapter.scenes)
+        new_index = current_index
+
+        if direction == "up" and current_index > 0:
+            new_index = current_index - 1
+        elif direction == "down" and current_index < total - 1:
+            new_index = current_index + 1
+        elif direction == "top":
+            new_index = 0
+        elif direction == "bottom":
+            new_index = total - 1
+
+        if new_index == current_index:
+            return
+
+        # Create new order
+        scenes = chapter.scenes.copy()
+        scenes.insert(new_index, scenes.pop(current_index))
+        new_order = [sc.id for sc in scenes]
+
+        self.scenes_reordered.emit(chapter.id, new_order)

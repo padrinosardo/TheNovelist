@@ -21,6 +21,8 @@ class Scene:
     word_count: int = 0
     created_date: str = ""
     modified_date: str = ""
+    synopsis: str = ""  # Scene synopsis/summary
+    notes: str = ""  # Scene notes
 
     @staticmethod
     def create_new(title: str, order: int, content: str = "") -> 'Scene':
@@ -68,7 +70,9 @@ class Scene:
             'order': self.order,
             'word_count': self.word_count,
             'created_date': self.created_date,
-            'modified_date': self.modified_date
+            'modified_date': self.modified_date,
+            'synopsis': self.synopsis,
+            'notes': self.notes
         }
 
     @staticmethod
@@ -81,7 +85,9 @@ class Scene:
             order=data.get('order', 0),
             word_count=data.get('word_count', 0),
             created_date=data.get('created_date', datetime.now().isoformat()),
-            modified_date=data.get('modified_date', datetime.now().isoformat())
+            modified_date=data.get('modified_date', datetime.now().isoformat()),
+            synopsis=data.get('synopsis', ''),
+            notes=data.get('notes', '')
         )
 
 
@@ -96,6 +102,8 @@ class Chapter:
     title: str
     scenes: List[Scene] = field(default_factory=list)
     order: int = 0
+    synopsis: str = ""  # Chapter synopsis/summary
+    notes: str = ""  # Chapter notes
 
     @staticmethod
     def create_new(title: str, order: int) -> 'Chapter':
@@ -161,7 +169,9 @@ class Chapter:
             'id': self.id,
             'title': self.title,
             'order': self.order,
-            'scenes': [scene.to_dict() for scene in self.scenes]
+            'scenes': [scene.to_dict() for scene in self.scenes],
+            'synopsis': self.synopsis,
+            'notes': self.notes
         }
 
     @staticmethod
@@ -171,7 +181,9 @@ class Chapter:
             id=data.get('id', str(uuid.uuid4())),
             title=data.get('title', 'Untitled Chapter'),
             order=data.get('order', 0),
-            scenes=[]
+            scenes=[],
+            synopsis=data.get('synopsis', ''),
+            notes=data.get('notes', '')
         )
 
         # Load scenes

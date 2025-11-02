@@ -2,7 +2,7 @@
 Manuscript View - Text editor with analysis panels
 """
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-                               QGroupBox, QLabel, QPushButton)
+                               QGroupBox, QLabel, QPushButton, QTextEdit)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QTextCursor
 from ui.pannels import TextEditor, ResultsPanel
@@ -220,6 +220,18 @@ class ManuscriptView(QWidget):
         self.style_panel = ResultsPanel("Style", "✍️")
         self.sidebar.add_tab(self.style_panel, "Style", "✍️")
 
+        # Synopsis panel
+        self.synopsis_edit = QTextEdit()
+        self.synopsis_edit.setPlaceholderText("Write a synopsis or summary of this scene...")
+        self.synopsis_edit.textChanged.connect(self._on_synopsis_changed)
+        self.sidebar.add_tab(self.synopsis_edit, "Synopsis", "📄")
+
+        # Notes panel
+        self.notes_edit = QTextEdit()
+        self.notes_edit.setPlaceholderText("Write notes about this scene...")
+        self.notes_edit.textChanged.connect(self._on_notes_changed)
+        self.sidebar.add_tab(self.notes_edit, "Notes", "📝")
+
         return self.sidebar
 
     def get_text(self) -> str:
@@ -260,7 +272,8 @@ class ManuscriptView(QWidget):
         self.word_count_label.setText("0 words")
 
     def load_scene(self, scene_id: str, chapter_title: str, scene_title: str,
-                   content: str, has_previous: bool = False, has_next: bool = False):
+                   content: str, has_previous: bool = False, has_next: bool = False,
+                   synopsis: str = "", notes: str = ""):
         """
         Load a scene into the editor
 
@@ -271,6 +284,8 @@ class ManuscriptView(QWidget):
             content: Scene content
             has_previous: Whether there's a previous scene
             has_next: Whether there's a next scene
+            synopsis: Scene synopsis (optional)
+            notes: Scene notes (optional)
         """
         self._current_scene_id = scene_id
         self._current_chapter_title = chapter_title
@@ -292,6 +307,15 @@ class ManuscriptView(QWidget):
         # Enable/disable navigation buttons
         self.prev_button.setEnabled(has_previous)
         self.next_button.setEnabled(has_next)
+
+        # Load synopsis and notes (block signals to avoid triggering save)
+        self.synopsis_edit.blockSignals(True)
+        self.synopsis_edit.setPlainText(synopsis)
+        self.synopsis_edit.blockSignals(False)
+
+        self.notes_edit.blockSignals(True)
+        self.notes_edit.setPlainText(notes)
+        self.notes_edit.blockSignals(False)
 
         # Reconnect signal
         self.editor.editor.textChanged.connect(self._on_editor_text_changed)
@@ -431,3 +455,23 @@ class ManuscriptView(QWidget):
         self.find_dialog.show()
         self.find_dialog.raise_()
         self.find_dialog.activateWindow()
+
+    def _on_synopsis_changed(self):
+        """Handle synopsis text change"""
+        if self._current_scene_id and self.manuscript_manager:
+            synopsis = self.synopsis_edit.toPlainText()
+            scene = self.manuscript_manager.get_scene(self._current_scene_id)
+            if scene:
+                scene.synopsis = synopsis
+                # Emit text_changed to trigger save
+                self.text_changed.emit()
+
+    def _on_notes_changed(self):
+        """Handle notes text change"""
+        if self._current_scene_id and self.manuscript_manager:
+            notes = self.notes_edit.toPlainText()
+            scene = self.manuscript_manager.get_scene(self._current_scene_id)
+            if scene:
+                scene.notes = notes
+                # Emit text_changed to trigger save
+                self.text_changed.emit()

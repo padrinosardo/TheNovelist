@@ -111,37 +111,37 @@ Deve avere:
 ### #WORLDBUILD [elemento]
 Espande un aspetto del mondo (geografia, cultura, storia).
 
-**Esempio**: `#WORLDBUILD il Regno del Nord - cultura e tradizioni`
+**Esempio**: `#WORLDBUILD regno principale - cultura, politica e tradizioni`
 
 ### #MAGIA [sistema/incantesimo]
 Definisce o usa il sistema magico.
 
-**Esempio**: `#MAGIA incantesimo di evocazione - costo e conseguenze`
+**Esempio**: `#MAGIA incantesimo elementale - regole, costi e conseguenze`
 
 ### #RAZZA [nome]
 Crea dettagli per una razza fantasy.
 
-**Esempio**: `#RAZZA gli Elfi Oscuri - aspetto, cultura, abilità`
+**Esempio**: `#RAZZA popolazione fantasy - aspetto fisico, cultura, abilità uniche`
 
 ### #LEGGENDA [storia]
 Crea una leggenda o profezia del mondo.
 
-**Esempio**: `#LEGGENDA la profezia dell'Eletto che unirà i regni`
+**Esempio**: `#LEGGENDA profezia antica che prevede l'arrivo dell'eroe`
 
 ### #CREATURA [mostro/bestia]
 Disegna creature fantastiche.
 
-**Esempio**: `#CREATURA drago delle montagne - habitat, comportamento, debolezze`
+**Esempio**: `#CREATURA bestia leggendaria - habitat, comportamento, punti deboli`
 
 ### #BATTAGLIA [scontro]
 Coreografa uno scontro epico.
 
-**Esempio**: `#BATTAGLIA assedio della cittadella con draghi`
+**Esempio**: `#BATTAGLIA confronto finale tra eserciti con creature magiche`
 
 ### #ARTEFATTO [oggetto magico]
 Crea un oggetto magico con storia e poteri.
 
-**Esempio**: `#ARTEFATTO spada antica che assorbe anime`
+**Esempio**: `#ARTEFATTO reliquia antica con poteri straordinari e maledizione`
 
 ---
 

@@ -75,22 +75,22 @@ Richiede una descrizione dettagliata di un elemento specifico (personaggio, luog
 ### #BACKGROUND [personaggio]
 Genera un background dettagliato per il personaggio specificato.
 
-**Esempio**: `#BACKGROUND Detective Julie - focus su trauma infantile`
+**Esempio**: `#BACKGROUND protagonista - focus su evento traumatico del passato`
 
 ### #DIALOGO [situazione]
 Crea un dialogo realistico per la situazione descritta.
 
-**Esempio**: `#DIALOGO confronto tra Julie e il sospettato`
+**Esempio**: `#DIALOGO confronto emotivo tra protagonista e antagonista`
 
 ### #CONFLITTO [tipo]
 Esplora un conflitto specifico (interno/esterno).
 
-**Esempio**: `#CONFLITTO interno - senso di colpa di Julie per aver ucciso`
+**Esempio**: `#CONFLITTO interno - protagonista combatte tra dovere e desiderio`
 
 ### #SCENA [descrizione]
 Sviluppa una scena completa con ambientazione, azioni e dialoghi.
 
-**Esempio**: `#SCENA Julie torna sul luogo del delitto di notte`
+**Esempio**: `#SCENA protagonista ritorna al luogo dell'evento cruciale`
 
 ---
 

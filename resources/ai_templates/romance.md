@@ -162,7 +162,7 @@ Crea una scena di intimità fisica ed emotiva.
 ### #GESTO_ROMANTICO [azione]
 Sviluppa un gesto significativo di uno verso l'altro.
 
-**Esempio**: `#GESTO_ROMANTICO lui impara la sua lingua per sorprenderla`
+**Esempio**: `#GESTO_ROMANTICO un protagonista fa qualcosa di speciale per l'altro`
 
 ### #CHIMICA [interazione]
 Mostra la chimica attraverso micro-interazioni.

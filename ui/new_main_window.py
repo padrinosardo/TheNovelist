@@ -8,7 +8,8 @@ from PySide6.QtGui import QCloseEvent
 
 from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            ManuscriptView, CharactersListView, CharacterDetailView,
-                           StatisticsDashboard)
+                           StatisticsDashboard, ChaptersPreviewWidget, ScenesPreviewWidget,
+                           ChapterDetailWidget)
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
                       NotesListView, ProjectInfoDetailView)
@@ -126,6 +127,11 @@ class TheNovelistMainWindow(QMainWindow):
         self.sources_list_view = SourcesListView()
         self.notes_list_view = NotesListView()
 
+        # Preview widgets
+        self.chapters_preview = ChaptersPreviewWidget()
+        self.scenes_preview = ScenesPreviewWidget()
+        self.chapter_detail = ChapterDetailWidget()
+
         self.workspace.add_view(WorkspaceContainer.VIEW_MANUSCRIPT, self.manuscript_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTERS_LIST, self.characters_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTER_DETAIL, self.character_detail_view)
@@ -138,6 +144,11 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace.add_view(WorkspaceContainer.VIEW_TIMELINE, self.timeline_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_SOURCES, self.sources_list_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_NOTES, self.notes_list_view)
+
+        # Add preview views
+        self.workspace.add_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW, self.chapters_preview)
+        self.workspace.add_view(WorkspaceContainer.VIEW_SCENES_PREVIEW, self.scenes_preview)
+        self.workspace.add_view(WorkspaceContainer.VIEW_CHAPTER_DETAIL, self.chapter_detail)
 
         # Show manuscript by default
         self.workspace.show_manuscript()
@@ -217,8 +228,8 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.about_requested.connect(self._show_about)
 
         # Project tree signals
-        self.project_tree.manuscript_selected.connect(self.workspace.show_manuscript)
-        self.project_tree.chapter_selected.connect(self._on_chapter_selected)
+        self.project_tree.manuscript_selected.connect(self._on_manuscript_selected)
+        self.project_tree.chapter_selected.connect(self._on_chapter_selected_for_preview)
         self.project_tree.scene_selected.connect(self._on_scene_selected)
         self.project_tree.characters_list_selected.connect(self._show_characters_list)
         self.project_tree.character_selected.connect(self._show_character_detail)
@@ -239,6 +250,8 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.rename_scene_requested.connect(self._rename_scene)
         self.project_tree.delete_chapter_requested.connect(self._delete_chapter)
         self.project_tree.delete_scene_requested.connect(self._delete_scene)
+        self.project_tree.chapters_reordered.connect(self._on_chapters_reordered)
+        self.project_tree.scenes_reordered.connect(self._on_scenes_reordered)
 
         # Character operations
         self.project_tree.add_character_requested.connect(self._add_character)
@@ -274,6 +287,15 @@ class TheNovelistMainWindow(QMainWindow):
         self.manuscript_view.scene_content_changed.connect(self._on_scene_content_changed)
         self.manuscript_view.previous_scene_requested.connect(self._go_to_previous_scene)
         self.manuscript_view.next_scene_requested.connect(self._go_to_next_scene)
+
+        # Preview widget signals
+        self.chapters_preview.chapter_clicked.connect(self._on_chapter_clicked_from_preview)
+        self.scenes_preview.scene_clicked.connect(self._on_scene_clicked_from_preview)
+
+        # Chapter detail widget signals
+        self.chapter_detail.scene_clicked.connect(self._on_scene_clicked_from_preview)
+        self.chapter_detail.back_requested.connect(self._on_chapter_detail_back_requested)
+        self.chapter_detail.chapter_updated.connect(self._on_chapter_updated)
 
         # Location view signals
         self.location_list_view.add_location_requested.connect(self._add_location)
@@ -1060,7 +1082,9 @@ class TheNovelistMainWindow(QMainWindow):
             scene_title=scene.title,
             content=scene.content,
             has_previous=previous_scene is not None,
-            has_next=next_scene is not None
+            has_next=next_scene is not None,
+            synopsis=scene.synopsis,
+            notes=scene.notes
         )
 
         # Update current scene in structure
@@ -1077,6 +1101,136 @@ class TheNovelistMainWindow(QMainWindow):
         if first_scene:
             self._on_scene_selected(first_scene.id)
             self.project_tree.select_scene(first_scene.id)
+
+    def _on_manuscript_selected(self):
+        """Handle manuscript selection from tree - show chapters preview"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        chapters = manager.get_structure().chapters
+
+        # Load chapters into preview
+        self.chapters_preview.load_chapters(chapters)
+
+        # Show chapters preview
+        self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
+
+    def _on_chapter_selected_for_preview(self, chapter_id: str):
+        """Handle chapter selection from tree - show chapter detail"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        chapter = manager.get_chapter(chapter_id)
+
+        if chapter:
+            # Load chapter into detail view
+            self.chapter_detail.load_chapter(chapter)
+
+            # Show chapter detail
+            self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTER_DETAIL)
+
+    def _on_chapter_clicked_from_preview(self, chapter_id: str):
+        """Handle chapter click from chapters preview - show chapter detail"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        chapter = manager.get_chapter(chapter_id)
+
+        if chapter:
+            # Load chapter into detail view
+            self.chapter_detail.load_chapter(chapter)
+
+            # Show chapter detail
+            self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTER_DETAIL)
+
+            # Update tree selection
+            self.project_tree.select_chapter(chapter_id)
+
+    def _on_scene_clicked_from_preview(self, scene_id: str):
+        """Handle scene click from scenes preview - open scene in editor"""
+        if not self.project_manager.has_project():
+            return
+
+        # Load scene in editor
+        self._on_scene_selected(scene_id)
+
+        # Update tree selection
+        self.project_tree.select_scene(scene_id)
+
+    def _on_chapters_reordered(self, chapter_ids: list):
+        """Handle chapters reordered from project tree"""
+        if not self.project_manager.has_project():
+            return
+
+        # Reorder chapters in the structure
+        manager = self.project_manager.manuscript_structure_manager
+        success = manager.reorder_chapters(chapter_ids)
+
+        if success:
+            # 1. Refresh project tree
+            self.project_tree.update_manuscript_structure(manager.get_structure())
+
+            # 2. Refresh chapters preview if visible
+            if self.workspace.get_current_view_name() == WorkspaceContainer.VIEW_CHAPTERS_PREVIEW:
+                chapters = manager.get_structure().chapters
+                self.chapters_preview.load_chapters(chapters)
+
+            # 3. Mark project as modified
+            self.is_modified = True
+
+    def _on_scenes_reordered(self, chapter_id: str, scene_ids: list):
+        """Handle scenes reordered from project tree"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        success = manager.reorder_scenes(chapter_id, scene_ids)
+
+        if success:
+            # 1. Refresh project tree
+            self.project_tree.update_manuscript_structure(manager.get_structure())
+
+            # 2. Refresh scenes preview if visible
+            if self.workspace.get_current_view_name() == WorkspaceContainer.VIEW_SCENES_PREVIEW:
+                chapter = manager.get_chapter(chapter_id)
+                if chapter:
+                    self.scenes_preview.load_scenes(chapter.scenes, chapter.title)
+
+            # 3. Refresh chapter detail if visible and showing this chapter
+            if self.workspace.get_current_view_name() == WorkspaceContainer.VIEW_CHAPTER_DETAIL:
+                chapter = manager.get_chapter(chapter_id)
+                if chapter:
+                    self.chapter_detail.load_chapter(chapter)
+
+            # 4. Mark project as modified
+            self.is_modified = True
+
+    def _on_chapter_detail_back_requested(self):
+        """Handle back button click from chapter detail - show chapters preview"""
+        if not self.project_manager.has_project():
+            return
+
+        # Save current chapter data before going back
+        self.chapter_detail.save_current_data()
+
+        # Show chapters preview
+        manager = self.project_manager.manuscript_structure_manager
+        chapters = manager.get_structure().chapters
+        self.chapters_preview.load_chapters(chapters)
+        self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
+
+    def _on_chapter_updated(self, chapter_id: str):
+        """Handle chapter update (synopsis/notes changed)"""
+        if not self.project_manager.has_project():
+            return
+
+        # Mark as modified
+        if not self.is_modified:
+            self.is_modified = True
+            self._update_window_title()
 
     def _on_scene_content_changed(self, scene_id: str, content: str):
         """Handle scene content change"""
@@ -1241,7 +1395,9 @@ class TheNovelistMainWindow(QMainWindow):
                         scene_title=new_title,
                         content=scene.content,
                         has_previous=manager.get_previous_scene(scene_id) is not None,
-                        has_next=manager.get_next_scene(scene_id) is not None
+                        has_next=manager.get_next_scene(scene_id) is not None,
+                        synopsis=scene.synopsis,
+                        notes=scene.notes
                     )
 
             self.is_modified = True
