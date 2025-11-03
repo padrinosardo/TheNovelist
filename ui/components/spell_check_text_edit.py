@@ -118,7 +118,7 @@ class SpellCheckTextEdit(QTextEdit):
                             lambda checked=False, s=suggestion, w=word:
                             self._replace_current_word(w, s)
                         )
-                        action.setStyleSheet("font-weight: bold; color: #2196F3;")
+                        # QAction doesn't support setStyleSheet in PySide6
                         menu.addAction(action)
 
                     menu.addSeparator()

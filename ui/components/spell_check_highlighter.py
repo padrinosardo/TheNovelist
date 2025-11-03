@@ -133,7 +133,8 @@ class SpellCheckHighlighter(QSyntaxHighlighter):
         Returns:
             List of suggested corrections
         """
-        return list(self.spell_checker.candidates(word.lower()))
+        candidates = self.spell_checker.candidates(word.lower())
+        return list(candidates) if candidates else []
 
     def set_enabled(self, enabled: bool):
         """
