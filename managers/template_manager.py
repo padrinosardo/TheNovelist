@@ -386,6 +386,46 @@ class TemplateManager:
             'chapter_id': ch3_id
         })
 
+        # Results
+        ch4_id = str(uuid.uuid4())
+        scene4_id = str(uuid.uuid4())
+
+        chapters.append({
+            'id': ch4_id,
+            'title': labels['research_ch4_title'],
+            'description': labels['research_ch4_desc'],
+            'order': 3,
+            'scenes': [scene4_id]
+        })
+
+        scenes.append({
+            'id': scene4_id,
+            'title': labels['research_ch4_title'],
+            'content': labels['research_ch4_content'],
+            'order': 0,
+            'chapter_id': ch4_id
+        })
+
+        # Conclusions
+        ch5_id = str(uuid.uuid4())
+        scene5_id = str(uuid.uuid4())
+
+        chapters.append({
+            'id': ch5_id,
+            'title': labels['research_ch5_title'],
+            'description': labels['research_ch5_desc'],
+            'order': 4,
+            'scenes': [scene5_id]
+        })
+
+        scenes.append({
+            'id': scene5_id,
+            'title': labels['research_ch5_title'],
+            'content': labels['research_ch5_content'],
+            'order': 0,
+            'chapter_id': ch5_id
+        })
+
         return {
             'chapters': chapters,
             'scenes': scenes,
@@ -478,6 +518,12 @@ class TemplateManager:
                 'research_ch3_title': 'Methods',
                 'research_ch3_desc': 'Metodologia della ricerca',
                 'research_ch3_content': 'Participants, procedure, materials, analysis...',
+                'research_ch4_title': 'Results',
+                'research_ch4_desc': 'Risultati della ricerca',
+                'research_ch4_content': 'Main findings, data, statistical analysis...',
+                'research_ch5_title': 'Conclusions',
+                'research_ch5_desc': 'Conclusioni e implicazioni',
+                'research_ch5_content': 'Summary, implications, limitations, future research...',
             },
             'en': {
                 # Novel
@@ -543,6 +589,12 @@ class TemplateManager:
                 'research_ch3_title': 'Methods',
                 'research_ch3_desc': 'Research methodology',
                 'research_ch3_content': 'Participants, procedure, materials, analysis...',
+                'research_ch4_title': 'Results',
+                'research_ch4_desc': 'Research findings',
+                'research_ch4_content': 'Main findings, data, statistical analysis...',
+                'research_ch5_title': 'Conclusions',
+                'research_ch5_desc': 'Conclusions and implications',
+                'research_ch5_content': 'Summary, implications, limitations, future research...',
             }
         }
 
