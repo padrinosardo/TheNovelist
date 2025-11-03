@@ -4,7 +4,7 @@ New Project Dialog - Advanced project creation with project types and metadata
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QGroupBox,
     QLineEdit, QComboBox, QSpinBox, QPushButton, QLabel,
-    QTextEdit, QWidget, QScrollArea, QFrame
+    QTextEdit, QWidget, QScrollArea, QFrame, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
@@ -40,6 +40,7 @@ class NewProjectDialog(QDialog):
         self._genre = ""
         self._target_word_count = 0
         self._tags = []
+        self._use_template = True  # Default: use template
 
         self._setup_ui()
         self._connect_signals()
@@ -127,6 +128,43 @@ class NewProjectDialog(QDialog):
 
         basic_group.setLayout(basic_layout)
         scroll_layout.addWidget(basic_group)
+
+        # === TEMPLATE OPTION ===
+        template_group = QGroupBox("Initial Content")
+        template_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #9C27B0;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        template_layout = QVBoxLayout()
+
+        self.use_template_checkbox = QCheckBox("Use base template for this project type")
+        self.use_template_checkbox.setChecked(True)
+        self.use_template_checkbox.setToolTip(
+            "Start with a pre-configured template including sample chapters, "
+            "scenes, and characters appropriate for this project type"
+        )
+        template_layout.addWidget(self.use_template_checkbox)
+
+        template_info = QLabel(
+            "📋 Templates provide a helpful starting structure with sample chapters, "
+            "scenes, and characters. You can modify or delete them after creation."
+        )
+        template_info.setWordWrap(True)
+        template_info.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        template_layout.addWidget(template_info)
+
+        template_group.setLayout(template_layout)
+        scroll_layout.addWidget(template_group)
 
         # === OPTIONAL METADATA GROUP ===
         metadata_group = QGroupBox("Optional Metadata")
@@ -369,6 +407,9 @@ class NewProjectDialog(QDialog):
         tags_text = self.tags_input.text().strip()
         tags = [tag.strip() for tag in tags_text.split(",") if tag.strip()]
 
+        # Get template preference
+        use_template = self.use_template_checkbox.isChecked()
+
         # Store values
         self._title = title
         self._author = author
@@ -377,16 +418,17 @@ class NewProjectDialog(QDialog):
         self._genre = genre
         self._target_word_count = target_word_count
         self._tags = tags
+        self._use_template = use_template
 
         # Accept dialog
         self.accept()
 
-    def get_project_data(self) -> Tuple[str, str, str, ProjectType, str, int, List[str]]:
+    def get_project_data(self) -> Tuple[str, str, str, ProjectType, str, int, List[str], bool]:
         """
         Get the project data entered by the user.
 
         Returns:
-            Tuple: (title, author, language, project_type, genre, target_word_count, tags)
+            Tuple: (title, author, language, project_type, genre, target_word_count, tags, use_template)
         """
         return (
             self._title,
@@ -395,5 +437,6 @@ class NewProjectDialog(QDialog):
             self._project_type,
             self._genre,
             self._target_word_count,
-            self._tags
+            self._tags,
+            self._use_template
         )

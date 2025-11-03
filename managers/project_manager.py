@@ -22,6 +22,7 @@ from managers.timeline_manager import TimelineManager
 from managers.source_manager import SourceManager
 from managers.note_manager import NoteManager
 from managers.worldbuilding_manager import WorldbuildingManager
+from managers.template_manager import TemplateManager
 from utils.logger import AppLogger
 from utils.error_handler import ErrorHandler
 from utils.backup_manager import BackupManager
@@ -58,7 +59,7 @@ class ProjectManager:
 
     def create_new_project(self, title: str, author: str, filepath: str, language: str = 'it',
                           project_type: ProjectType = ProjectType.NOVEL, genre: str = "",
-                          target_word_count: int = 0, tags: List[str] = None) -> bool:
+                          target_word_count: int = 0, tags: List[str] = None, use_template: bool = True) -> bool:
         """
         Create a new project and save it as a ZIP file
 
@@ -71,6 +72,7 @@ class ProjectManager:
             genre: Genre/category (optional)
             target_word_count: Target word count (optional)
             tags: List of tags (optional)
+            use_template: Whether to use a base template for the project type (default: True)
 
         Returns:
             bool: True if successful, False otherwise
@@ -107,14 +109,87 @@ class ProjectManager:
             with open(manifest_path, 'w', encoding='utf-8') as f:
                 json.dump(project.to_dict(), f, indent=2)
 
-            # Create default manuscript structure (Chapter 1 > Scene 1)
-            default_structure = ManuscriptStructure.create_default()
-            with open(manuscript_structure_path, 'w', encoding='utf-8') as f:
-                json.dump(default_structure.to_dict(), f, indent=2)
+            # Create manuscript structure and characters based on template preference
+            if use_template:
+                # Use template manager to get type-specific template
+                template_manager = TemplateManager()
+                template_data = template_manager.get_template(project_type, language)
 
-            # Write empty characters.json
-            with open(characters_path, 'w', encoding='utf-8') as f:
-                json.dump({'characters': []}, f, indent=2)
+                # Create manuscript structure from template
+                manuscript_structure = ManuscriptStructure()
+
+                # Add chapters from template
+                for chapter_data in template_data.get('chapters', []):
+                    chapter = Chapter(
+                        id=chapter_data['id'],
+                        title=chapter_data['title'],
+                        description=chapter_data.get('description', ''),
+                        order=chapter_data['order']
+                    )
+                    # Add scenes to chapter
+                    for scene_id in chapter_data.get('scenes', []):
+                        # Find scene data in template
+                        scene_data = next((s for s in template_data.get('scenes', []) if s['id'] == scene_id), None)
+                        if scene_data:
+                            scene = Scene(
+                                id=scene_data['id'],
+                                title=scene_data['title'],
+                                description=scene_data.get('description', ''),
+                                content=scene_data.get('content', ''),
+                                order=scene_data['order']
+                            )
+                            chapter.scenes.append(scene)
+
+                    manuscript_structure.chapters.append(chapter)
+
+                # Handle projects without chapters (e.g., articles, poetry)
+                if not template_data.get('has_chapters', True):
+                    # Add scenes directly without chapters
+                    for scene_data in template_data.get('scenes', []):
+                        scene = Scene(
+                            id=scene_data['id'],
+                            title=scene_data['title'],
+                            description=scene_data.get('description', ''),
+                            content=scene_data.get('content', ''),
+                            order=scene_data['order']
+                        )
+                        manuscript_structure.scenes.append(scene)
+
+                # Write manuscript structure
+                with open(manuscript_structure_path, 'w', encoding='utf-8') as f:
+                    json.dump(manuscript_structure.to_dict(), f, indent=2)
+
+                # Write characters from template
+                characters_list = []
+                for char_data in template_data.get('characters', []):
+                    character = Character(
+                        name=char_data['name'],
+                        role=char_data.get('role', ''),
+                        description=char_data.get('description', ''),
+                        personality=char_data.get('personality', ''),
+                        goals=char_data.get('goals', ''),
+                        relationships=char_data.get('relationships', ''),
+                        notes=char_data.get('notes', '')
+                    )
+                    characters_list.append(character.to_dict())
+
+                with open(characters_path, 'w', encoding='utf-8') as f:
+                    json.dump({'characters': characters_list}, f, indent=2)
+
+                AppLogger.info(f"Created project with template: {len(template_data.get('chapters', []))} chapters, "
+                              f"{len(template_data.get('scenes', []))} scenes, "
+                              f"{len(template_data.get('characters', []))} characters")
+            else:
+                # Create default manuscript structure (Chapter 1 > Scene 1)
+                default_structure = ManuscriptStructure.create_default()
+                with open(manuscript_structure_path, 'w', encoding='utf-8') as f:
+                    json.dump(default_structure.to_dict(), f, indent=2)
+
+                # Write empty characters.json
+                with open(characters_path, 'w', encoding='utf-8') as f:
+                    json.dump({'characters': []}, f, indent=2)
+
+                AppLogger.info("Created project with default structure")
 
             # Create empty container files for available containers
             available_containers = ContainerType.get_available_for_project_type(project_type)

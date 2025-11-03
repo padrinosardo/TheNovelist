@@ -437,7 +437,7 @@ class TheNovelistMainWindow(QMainWindow):
             return
 
         # Get project data from dialog
-        title, author, language, project_type, genre, target_word_count, tags = dialog.get_project_data()
+        title, author, language, project_type, genre, target_word_count, tags, use_template = dialog.get_project_data()
 
         # Get save location
         filepath, _ = QFileDialog.getSaveFileName(
@@ -468,7 +468,8 @@ class TheNovelistMainWindow(QMainWindow):
             project_type=project_type,
             genre=genre,
             target_word_count=target_word_count,
-            tags=tags
+            tags=tags,
+            use_template=use_template
         )
 
         if success:
