@@ -21,6 +21,7 @@ from workers.thread_analysis import AnalysisThread
 from analysis.grammar import GrammarAnalyzer
 from analysis.repetition import RepetitionAnalyzer
 from analysis.style import StyleAnalyzer
+from analysis.context_analyzer import ContextAnalyzer
 from utils.settings import SettingsManager
 import os
 
@@ -53,6 +54,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.grammar_analyzer = GrammarAnalyzer()
         self.repetitions_analyzer = RepetitionAnalyzer()
         self.style_analyzer = StyleAnalyzer()
+        self.context_analyzer = ContextAnalyzer()
 
         # Auto-save
         self.auto_save_enabled = True
@@ -410,6 +412,7 @@ class TheNovelistMainWindow(QMainWindow):
         try:
             self.grammar_analyzer.set_language(language)
             self.style_analyzer.set_language(language)
+            self.context_analyzer.set_language(language)
             # Update text editor UI language for context menus
             self.manuscript_view.text_editor.set_ui_language(language)
             # Update spell checker language
@@ -1682,13 +1685,18 @@ class TheNovelistMainWindow(QMainWindow):
         """Start an analysis in background"""
         text = self.manuscript_view.get_text()
 
+        # Get project type for context-aware analysis
+        project_type = None
+        if self.project_manager.current_project:
+            project_type = self.project_manager.current_project.project_type
+
         # Show progress
         self.progress.setVisible(True)
         self.progress.setRange(0, 0)
         self.statusBar().showMessage(f"{analysis_name} in progress...")
 
         # Start thread
-        self.analysis_thread = AnalysisThread(text, analysis_type)
+        self.analysis_thread = AnalysisThread(text, analysis_type, project_type)
         self.analysis_thread.finished.connect(
             lambda result: self._handle_analysis_result(
                 result, analysis_type, analysis_name

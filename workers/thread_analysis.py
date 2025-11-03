@@ -21,17 +21,19 @@ class AnalysisThread(QThread):
     TYPE_REPETITIONS = "repetitions"
     TYPE_STYLE = "style"
 
-    def __init__(self, text, analysis_type):
+    def __init__(self, text, analysis_type, project_type=None):
         """
         Initialize the analysis thread
 
         Args:
             text: Text to analyze
             analysis_type: Type of analysis (grammar, repetitions, style)
+            project_type: Optional ProjectType for context-aware analysis
         """
         super().__init__()
         self.text = text
         self.analysis_type = analysis_type
+        self.project_type = project_type
 
         # Initialize analyzers (lazy loading)
         self._grammar_analyzer = None
@@ -85,4 +87,4 @@ class AnalysisThread(QThread):
         if self._style_analyzer is None:
             self._style_analyzer = StyleAnalyzer()
 
-        return self._style_analyzer.analyze(self.text)
+        return self._style_analyzer.analyze(self.text, self.project_type)
