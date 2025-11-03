@@ -162,14 +162,27 @@ class ProjectManager:
                 # Write characters from template
                 characters_list = []
                 for char_data in template_data.get('characters', []):
+                    # Combine all character info into description since Character class
+                    # only has name, description, images, id, ai_conversation_history
+                    description_parts = []
+                    if char_data.get('role'):
+                        description_parts.append(f"Role: {char_data['role']}")
+                    if char_data.get('description'):
+                        description_parts.append(f"Description: {char_data['description']}")
+                    if char_data.get('personality'):
+                        description_parts.append(f"Personality: {char_data['personality']}")
+                    if char_data.get('goals'):
+                        description_parts.append(f"Goals: {char_data['goals']}")
+                    if char_data.get('relationships'):
+                        description_parts.append(f"Relationships: {char_data['relationships']}")
+                    if char_data.get('notes'):
+                        description_parts.append(f"Notes: {char_data['notes']}")
+
+                    full_description = '\n\n'.join(description_parts)
+
                     character = Character(
                         name=char_data['name'],
-                        role=char_data.get('role', ''),
-                        description=char_data.get('description', ''),
-                        personality=char_data.get('personality', ''),
-                        goals=char_data.get('goals', ''),
-                        relationships=char_data.get('relationships', ''),
-                        notes=char_data.get('notes', '')
+                        description=full_description
                     )
                     characters_list.append(character.to_dict())
 
@@ -236,7 +249,7 @@ class ProjectManager:
             return True
 
         except Exception as e:
-            print(f"Error creating project: {e}")
+            AppLogger.error(f"Error creating project: {e}", exc_info=True)
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
             return False
