@@ -410,6 +410,10 @@ class TheNovelistMainWindow(QMainWindow):
         try:
             self.grammar_analyzer.set_language(language)
             self.style_analyzer.set_language(language)
+            # Update text editor UI language for context menus
+            self.manuscript_view.text_editor.set_ui_language(language)
+            # Update spell checker language
+            self.manuscript_view.set_spell_check_language(language)
         except Exception as e:
             print(f"Warning: Failed to update analyzer language: {e}")
 
@@ -537,6 +541,10 @@ class TheNovelistMainWindow(QMainWindow):
 
             self.is_modified = False
             self._update_ui_state()
+
+            # Update spell checker language for opened project
+            if project:
+                self.manuscript_view.set_spell_check_language(project.language)
 
             # Add to recent projects
             self.settings.add_recent_project(filepath)
@@ -883,6 +891,10 @@ class TheNovelistMainWindow(QMainWindow):
 
             self.is_modified = False
             self._update_ui_state()
+
+            # Update spell checker language for opened project
+            if project:
+                self.manuscript_view.set_spell_check_language(project.language)
 
             # Add to recent projects (moves to top)
             self.settings.add_recent_project(filepath)

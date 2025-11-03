@@ -120,6 +120,9 @@ class ProjectTree(QTreeWidget):
         self._current_characters = characters
         self._manuscript_structure = manuscript_structure
 
+        # Get UI labels in project language
+        ui_labels = self._get_ui_labels(project.language)
+
         # Root node - Project title
         root = QTreeWidgetItem(self)
         root.setText(0, f"📁 {project.title}")
@@ -128,12 +131,12 @@ class ProjectTree(QTreeWidget):
 
         # Project Info node - Simple clickable item without children
         info_item = QTreeWidgetItem(root)
-        info_item.setText(0, "📋 Project Info")
+        info_item.setText(0, f"📋 {ui_labels['project_info']}")
         info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info")
 
         # Manuscript node with hierarchy
         manuscript_item = QTreeWidgetItem(root)
-        manuscript_item.setText(0, "📄 Manuscript")
+        manuscript_item.setText(0, f"📄 {ui_labels['manuscript']}")
         manuscript_item.setExpanded(True)
         manuscript_item.setData(0, Qt.ItemDataRole.UserRole, "manuscript")
 
@@ -153,7 +156,7 @@ class ProjectTree(QTreeWidget):
 
         # Characters node
         characters_item = QTreeWidgetItem(root)
-        characters_item.setText(0, "👤 Characters")
+        characters_item.setText(0, f"👤 {ui_labels['characters']}")
         characters_item.setExpanded(True)
         characters_item.setData(0, Qt.ItemDataRole.UserRole, "characters")
 
@@ -165,7 +168,7 @@ class ProjectTree(QTreeWidget):
 
         # Statistics node
         statistics_item = QTreeWidgetItem(root)
-        statistics_item.setText(0, "📊 Statistics")
+        statistics_item.setText(0, f"📊 {ui_labels['statistics']}")
         statistics_item.setData(0, Qt.ItemDataRole.UserRole, "statistics")
 
         # Dynamic containers based on project type
@@ -176,14 +179,58 @@ class ProjectTree(QTreeWidget):
             if container_type in [ContainerType.MANUSCRIPT, ContainerType.CHARACTERS]:
                 continue
 
-            # Get display info for this container
-            icon, name = ContainerType.get_display_info(container_type, 'it')
+            # Get display info for this container using project language
+            icon, name = ContainerType.get_display_info(container_type, project.language)
 
             # Create tree item
             container_item = QTreeWidgetItem(root)
             container_item.setText(0, f"{icon} {name}")
             container_item.setData(0, Qt.ItemDataRole.UserRole, container_type.value)
             container_item.setExpanded(False)
+
+    def _get_ui_labels(self, language: str) -> dict:
+        """
+        Get UI labels translated to the specified language
+
+        Args:
+            language: Language code (it, en, es, fr, de)
+
+        Returns:
+            dict: Dictionary of translated labels
+        """
+        labels = {
+            'it': {
+                'project_info': 'Info Progetto',
+                'manuscript': 'Manoscritto',
+                'characters': 'Personaggi',
+                'statistics': 'Statistiche'
+            },
+            'en': {
+                'project_info': 'Project Info',
+                'manuscript': 'Manuscript',
+                'characters': 'Characters',
+                'statistics': 'Statistics'
+            },
+            'es': {
+                'project_info': 'Info del Proyecto',
+                'manuscript': 'Manuscrito',
+                'characters': 'Personajes',
+                'statistics': 'Estadísticas'
+            },
+            'fr': {
+                'project_info': 'Info Projet',
+                'manuscript': 'Manuscrit',
+                'characters': 'Personnages',
+                'statistics': 'Statistiques'
+            },
+            'de': {
+                'project_info': 'Projektinfo',
+                'manuscript': 'Manuskript',
+                'characters': 'Charaktere',
+                'statistics': 'Statistiken'
+            }
+        }
+        return labels.get(language, labels['en'])
 
     def update_characters(self, characters: List[Character]):
         """
