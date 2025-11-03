@@ -2,8 +2,6 @@
 Template Manager - Pre-configured project structures for different project types
 """
 from models.project_type import ProjectType
-from models.manuscript_structure import ManuscriptStructureManager, Chapter, Scene
-from models.character import Character
 from typing import Dict, List
 import uuid
 
