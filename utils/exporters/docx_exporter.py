@@ -122,6 +122,10 @@ class DOCXExporter(BaseExporter):
         try:
             AppLogger.info(f"DOCX Export: Starting export to {output_path}")
 
+            # Get type-specific formatting
+            self.type_formatting = self.get_type_specific_formatting()
+            AppLogger.debug(f"Using type-specific formatting for {self.project.project_type}")
+
             # Crea documento Word
             doc = Document()
 
@@ -160,9 +164,10 @@ class DOCXExporter(BaseExporter):
         """
         sections = doc.sections
         for section in sections:
-            # Margini in inches (convertiti da cm se specificati nelle opzioni)
-            margin_left = self._get_option('margin_left', 2.5)
-            margin_right = self._get_option('margin_right', 2.5)
+            # Margini in inches (convertiti da cm se specificati nelle opzioni) - usa type-specific formatting
+            fmt = self.type_formatting
+            margin_left = self._get_option('margin_left', fmt.get('margin_left', 2.5))
+            margin_right = self._get_option('margin_right', fmt.get('margin_right', 2.5))
             margin_top = self._get_option('margin_top', 2.5)
             margin_bottom = self._get_option('margin_bottom', 2.5)
 

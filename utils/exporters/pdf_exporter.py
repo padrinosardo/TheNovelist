@@ -142,12 +142,16 @@ class PDFExporter(BaseExporter):
         try:
             AppLogger.info(f"PDF Export: Starting export to {output_path}")
 
-            # Crea documento PDF
+            # Get type-specific formatting
+            self.type_formatting = self.get_type_specific_formatting()
+            AppLogger.debug(f"Using type-specific formatting for {self.project.project_type}")
+
+            # Crea documento PDF con margini specifici per tipo
             doc = SimpleDocTemplate(
                 output_path,
                 pagesize=A4,
-                rightMargin=self._get_option('margin_right', 2.5) * cm,
-                leftMargin=self._get_option('margin_left', 2.5) * cm,
+                rightMargin=self._get_option('margin_right', self.type_formatting.get('margin_right', 2.5)) * cm,
+                leftMargin=self._get_option('margin_left', self.type_formatting.get('margin_left', 2.5)) * cm,
                 topMargin=self._get_option('margin_top', 2.5) * cm,
                 bottomMargin=self._get_option('margin_bottom', 2.5) * cm,
             )
@@ -186,6 +190,21 @@ class PDFExporter(BaseExporter):
             dict: Dizionario di stili
         """
         styles = getSampleStyleSheet()
+
+        # Get type-specific formatting
+        fmt = self.type_formatting
+
+        # Map alignment strings to ReportLab constants
+        align_map = {
+            'left': TA_LEFT,
+            'center': TA_CENTER,
+            'justify': TA_JUSTIFY
+        }
+        text_alignment = align_map.get(fmt.get('align_text', 'justify'), TA_JUSTIFY)
+
+        # Calculate leading from line spacing
+        base_font_size = fmt.get('font_size', 11)
+        leading = base_font_size * fmt.get('line_spacing', 1.5)
 
         # Stile titolo cover
         styles.add(ParagraphStyle(
@@ -244,16 +263,17 @@ class PDFExporter(BaseExporter):
             fontName='Helvetica-Bold'
         ))
 
-        # Stile contenuto scena
+        # Stile contenuto scena - uses type-specific formatting
         styles.add(ParagraphStyle(
             name='SceneContent',
             parent=styles['Normal'],
-            fontSize=self._get_option('content_font_size', 11),
+            fontSize=self._get_option('content_font_size', base_font_size),
             textColor=colors.black,
-            spaceAfter=12,
-            alignment=TA_JUSTIFY,
-            fontName='Times-Roman',
-            leading=16
+            spaceAfter=fmt.get('paragraph_spacing', 12),
+            alignment=text_alignment,
+            fontName=fmt.get('font_family', 'Times-Roman'),
+            leading=leading,
+            firstLineIndent=24 if fmt.get('first_line_indent', False) else 0
         ))
 
         # Stile TOC
@@ -405,8 +425,9 @@ class PDFExporter(BaseExporter):
                 if j < len(chapter.scenes):
                     story.append(Spacer(1, 0.5 * cm))
 
-            # Page break tra capitoli (se richiesto)
-            if self._get_option('chapter_page_break', True) and i < len(chapters):
+            # Page break tra capitoli (se richiesto) - usa type-specific formatting
+            chapter_page_break = self._get_option('chapter_page_break', self.type_formatting.get('chapter_starts_new_page', True))
+            if chapter_page_break and i < len(chapters):
                 story.append(PageBreak())
 
         AppLogger.debug(f"Added manuscript content: {len(chapters)} chapters")
