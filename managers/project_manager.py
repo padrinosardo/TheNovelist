@@ -123,20 +123,24 @@ class ProjectManager:
                     chapter = Chapter(
                         id=chapter_data['id'],
                         title=chapter_data['title'],
-                        description=chapter_data.get('description', ''),
-                        order=chapter_data['order']
+                        synopsis=chapter_data.get('description', ''),  # Use synopsis instead of description
+                        order=chapter_data['order'],
+                        scenes=[]
                     )
                     # Add scenes to chapter
                     for scene_id in chapter_data.get('scenes', []):
                         # Find scene data in template
                         scene_data = next((s for s in template_data.get('scenes', []) if s['id'] == scene_id), None)
                         if scene_data:
+                            # Scene requires id, title, content, order as minimum
+                            # word_count, created_date, modified_date are auto-calculated or defaulted
                             scene = Scene(
                                 id=scene_data['id'],
                                 title=scene_data['title'],
-                                description=scene_data.get('description', ''),
+                                synopsis=scene_data.get('description', ''),  # Use synopsis instead of description
                                 content=scene_data.get('content', ''),
-                                order=scene_data['order']
+                                order=scene_data['order'],
+                                word_count=len(scene_data.get('content', '').split()) if scene_data.get('content') else 0
                             )
                             chapter.scenes.append(scene)
 
@@ -149,9 +153,10 @@ class ProjectManager:
                         scene = Scene(
                             id=scene_data['id'],
                             title=scene_data['title'],
-                            description=scene_data.get('description', ''),
+                            synopsis=scene_data.get('description', ''),  # Use synopsis instead of description
                             content=scene_data.get('content', ''),
-                            order=scene_data['order']
+                            order=scene_data['order'],
+                            word_count=len(scene_data.get('content', '').split()) if scene_data.get('content') else 0
                         )
                         manuscript_structure.scenes.append(scene)
 
