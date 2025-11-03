@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import tempfile
+import uuid
 import zipfile
 from typing import Optional, Tuple, List
 from models.project import Project
@@ -146,19 +147,32 @@ class ProjectManager:
 
                     manuscript_structure.chapters.append(chapter)
 
-                # Handle projects without chapters (e.g., articles, poetry)
+                # Handle projects without chapters (e.g., articles, poetry, short stories)
+                # Since ManuscriptStructure doesn't support standalone scenes,
+                # we create an invisible "container" chapter for projects without chapters
                 if not template_data.get('has_chapters', True):
-                    # Add scenes directly without chapters
+                    # Create a single container chapter
+                    container_chapter = Chapter(
+                        id=str(uuid.uuid4()),
+                        title="",  # Empty title makes it "invisible"
+                        synopsis="",
+                        order=0,
+                        scenes=[]
+                    )
+
+                    # Add all scenes to this chapter
                     for scene_data in template_data.get('scenes', []):
                         scene = Scene(
                             id=scene_data['id'],
                             title=scene_data['title'],
-                            synopsis=scene_data.get('description', ''),  # Use synopsis instead of description
+                            synopsis=scene_data.get('description', ''),
                             content=scene_data.get('content', ''),
                             order=scene_data['order'],
                             word_count=len(scene_data.get('content', '').split()) if scene_data.get('content') else 0
                         )
-                        manuscript_structure.scenes.append(scene)
+                        container_chapter.scenes.append(scene)
+
+                    manuscript_structure.chapters.append(container_chapter)
 
                 # Write manuscript structure
                 with open(manuscript_structure_path, 'w', encoding='utf-8') as f:
