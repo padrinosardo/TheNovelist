@@ -188,37 +188,42 @@ class AISettingsDialog(QDialog):
 
         # Info
         info = QLabel(
-            "OpenAI GPT models are versatile and widely used.\n"
+            "OpenAI GPT models are versatile and widely used for creative writing.\n"
             "Get your API key at: https://platform.openai.com/api-keys"
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #666; padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
         layout.addWidget(info)
 
-        # Coming soon notice
-        notice = QLabel("🚧 OpenAI provider coming in Step 2")
-        notice.setStyleSheet(
-            "color: #ff9800; font-weight: bold; padding: 20px; "
-            "background-color: #fff3cd; border-radius: 5px; margin: 20px;"
-        )
-        notice.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(notice)
-
-        # Form (disabled for now)
+        # Form
         form = QFormLayout()
         form.setSpacing(10)
 
         self.openai_api_key = QLineEdit()
         self.openai_api_key.setEchoMode(QLineEdit.EchoMode.Password)
         self.openai_api_key.setPlaceholderText("sk-...")
-        self.openai_api_key.setEnabled(False)
         form.addRow("API Key *:", self.openai_api_key)
 
         self.openai_model = QComboBox()
+        self.openai_model.addItem("GPT-4 Turbo (Recommended)", "gpt-4-turbo-preview")
         self.openai_model.addItem("GPT-4", "gpt-4")
         self.openai_model.addItem("GPT-3.5 Turbo", "gpt-3.5-turbo")
-        self.openai_model.setEnabled(False)
+        self.openai_model.addItem("GPT-3.5 Turbo 16K", "gpt-3.5-turbo-16k")
         form.addRow("Model:", self.openai_model)
+
+        self.openai_temperature = QDoubleSpinBox()
+        self.openai_temperature.setRange(0.0, 1.0)
+        self.openai_temperature.setSingleStep(0.1)
+        self.openai_temperature.setValue(0.7)
+        self.openai_temperature.setToolTip("Higher = more creative, Lower = more focused")
+        form.addRow("Temperature:", self.openai_temperature)
+
+        self.openai_max_tokens = QSpinBox()
+        self.openai_max_tokens.setRange(100, 4000)
+        self.openai_max_tokens.setSingleStep(100)
+        self.openai_max_tokens.setValue(2000)
+        self.openai_max_tokens.setToolTip("Maximum length of AI response")
+        form.addRow("Max Tokens:", self.openai_max_tokens)
 
         layout.addLayout(form)
         layout.addStretch()
@@ -287,9 +292,16 @@ class AISettingsDialog(QDialog):
         self.claude_temperature.setValue(claude_config.get('temperature', 0.7))
         self.claude_max_tokens.setValue(claude_config.get('max_tokens', 2000))
 
-        # OpenAI settings (when implemented)
-        # openai_config = self.config.get('providers', {}).get('openai', {})
-        # ...
+        # OpenAI settings
+        openai_config = self.config.get('providers', {}).get('openai', {})
+        self.openai_api_key.setText(openai_config.get('api_key', ''))
+
+        openai_model_index = self.openai_model.findData(openai_config.get('model', 'gpt-4-turbo-preview'))
+        if openai_model_index >= 0:
+            self.openai_model.setCurrentIndex(openai_model_index)
+
+        self.openai_temperature.setValue(openai_config.get('temperature', 0.7))
+        self.openai_max_tokens.setValue(openai_config.get('max_tokens', 2000))
 
         # Ollama settings (when implemented)
         # ollama_config = self.config.get('providers', {}).get('ollama', {})
@@ -341,6 +353,15 @@ class AISettingsDialog(QDialog):
         }
         self.ai_manager.update_provider_config('claude', claude_config)
 
+        # Update OpenAI config
+        openai_config = {
+            'api_key': self.openai_api_key.text().strip(),
+            'model': self.openai_model.currentData(),
+            'temperature': self.openai_temperature.value(),
+            'max_tokens': self.openai_max_tokens.value()
+        }
+        self.ai_manager.update_provider_config('openai', openai_config)
+
         # Set active provider
         active_provider = self.active_provider_combo.currentData()
         self.ai_manager.set_active_provider(active_provider)
@@ -357,6 +378,15 @@ class AISettingsDialog(QDialog):
                     self,
                     "Validation Error",
                     "Please enter your Claude API key."
+                )
+                return
+        elif active_provider == 'openai':
+            api_key = self.openai_api_key.text().strip()
+            if not api_key:
+                QMessageBox.warning(
+                    self,
+                    "Validation Error",
+                    "Please enter your OpenAI API key."
                 )
                 return
 

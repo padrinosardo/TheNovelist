@@ -4,6 +4,7 @@ AI Manager - Factory and configuration management for AI providers
 from typing import Optional, Dict, Any, List
 from .ai_provider import AIProvider, AIMessage, AIResponse
 from .claude_provider import ClaudeProvider
+from .openai_provider import OpenAIProvider
 from utils.logger import AppLogger
 import json
 import os
@@ -22,7 +23,8 @@ class AIManager:
     # Provider registry
     PROVIDERS = {
         'claude': ClaudeProvider,
-        # Future: 'openai': OpenAIProvider, 'ollama': OllamaProvider
+        'openai': OpenAIProvider,
+        # Future: 'ollama': OllamaProvider
     }
 
     # Character development system prompt
