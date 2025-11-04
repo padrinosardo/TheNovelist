@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any, List
 from .ai_provider import AIProvider, AIMessage, AIResponse
 from .claude_provider import ClaudeProvider
 from .openai_provider import OpenAIProvider
+from .ollama_provider import OllamaProvider
 from utils.logger import AppLogger
 import json
 import os
@@ -24,7 +25,7 @@ class AIManager:
     PROVIDERS = {
         'claude': ClaudeProvider,
         'openai': OpenAIProvider,
-        # Future: 'ollama': OllamaProvider
+        'ollama': OllamaProvider,
     }
 
     # Character development system prompt

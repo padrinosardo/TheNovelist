@@ -237,38 +237,56 @@ class AISettingsDialog(QDialog):
 
         # Info
         info = QLabel(
-            "Ollama runs AI models locally on your machine. Free and private.\n"
-            "Install from: https://ollama.ai/"
+            "Ollama runs AI models locally on your machine - completely free and private!\n"
+            "Perfect for IP protection. Install from: https://ollama.ai/"
         )
         info.setWordWrap(True)
         info.setStyleSheet("color: #666; padding: 10px; background-color: #f0f0f0; border-radius: 5px;")
         layout.addWidget(info)
 
-        # Coming soon notice
-        notice = QLabel("🚧 Ollama provider coming in Step 2")
-        notice.setStyleSheet(
-            "color: #ff9800; font-weight: bold; padding: 20px; "
-            "background-color: #fff3cd; border-radius: 5px; margin: 20px;"
-        )
-        notice.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(notice)
-
-        # Form (disabled for now)
+        # Form
         form = QFormLayout()
         form.setSpacing(10)
 
         self.ollama_url = QLineEdit()
         self.ollama_url.setPlaceholderText("http://localhost:11434")
-        self.ollama_url.setEnabled(False)
         form.addRow("Base URL:", self.ollama_url)
 
         self.ollama_model = QComboBox()
+        self.ollama_model.addItem("Llama 3 (Recommended)", "llama3")
         self.ollama_model.addItem("Llama 2", "llama2")
         self.ollama_model.addItem("Mistral", "mistral")
-        self.ollama_model.setEnabled(False)
+        self.ollama_model.addItem("CodeLlama", "codellama")
+        self.ollama_model.addItem("Phi", "phi")
         form.addRow("Model:", self.ollama_model)
 
+        self.ollama_temperature = QDoubleSpinBox()
+        self.ollama_temperature.setRange(0.0, 1.0)
+        self.ollama_temperature.setSingleStep(0.1)
+        self.ollama_temperature.setValue(0.7)
+        self.ollama_temperature.setToolTip("Higher = more creative, Lower = more focused")
+        form.addRow("Temperature:", self.ollama_temperature)
+
+        self.ollama_max_tokens = QSpinBox()
+        self.ollama_max_tokens.setRange(100, 4000)
+        self.ollama_max_tokens.setSingleStep(100)
+        self.ollama_max_tokens.setValue(2000)
+        self.ollama_max_tokens.setToolTip("Maximum length of AI response")
+        form.addRow("Max Tokens:", self.ollama_max_tokens)
+
         layout.addLayout(form)
+
+        # Installation help
+        help_label = QLabel(
+            "💡 To install models: Run 'ollama pull llama3' in terminal\n"
+            "   Check running: 'ollama list'"
+        )
+        help_label.setStyleSheet(
+            "color: #2196F3; padding: 10px; background-color: #E3F2FD; "
+            "border-radius: 5px; margin-top: 10px; font-family: monospace;"
+        )
+        layout.addWidget(help_label)
+
         layout.addStretch()
 
         return widget
@@ -303,9 +321,16 @@ class AISettingsDialog(QDialog):
         self.openai_temperature.setValue(openai_config.get('temperature', 0.7))
         self.openai_max_tokens.setValue(openai_config.get('max_tokens', 2000))
 
-        # Ollama settings (when implemented)
-        # ollama_config = self.config.get('providers', {}).get('ollama', {})
-        # ...
+        # Ollama settings
+        ollama_config = self.config.get('providers', {}).get('ollama', {})
+        self.ollama_url.setText(ollama_config.get('base_url', 'http://localhost:11434'))
+
+        ollama_model_index = self.ollama_model.findData(ollama_config.get('model', 'llama3'))
+        if ollama_model_index >= 0:
+            self.ollama_model.setCurrentIndex(ollama_model_index)
+
+        self.ollama_temperature.setValue(ollama_config.get('temperature', 0.7))
+        self.ollama_max_tokens.setValue(ollama_config.get('max_tokens', 2000))
 
     def _on_test_connection(self):
         """Test connection to active provider"""
@@ -362,6 +387,15 @@ class AISettingsDialog(QDialog):
         }
         self.ai_manager.update_provider_config('openai', openai_config)
 
+        # Update Ollama config
+        ollama_config = {
+            'base_url': self.ollama_url.text().strip(),
+            'model': self.ollama_model.currentData(),
+            'temperature': self.ollama_temperature.value(),
+            'max_tokens': self.ollama_max_tokens.value()
+        }
+        self.ai_manager.update_provider_config('ollama', ollama_config)
+
         # Set active provider
         active_provider = self.active_provider_combo.currentData()
         self.ai_manager.set_active_provider(active_provider)
@@ -387,6 +421,16 @@ class AISettingsDialog(QDialog):
                     self,
                     "Validation Error",
                     "Please enter your OpenAI API key."
+                )
+                return
+        elif active_provider == 'ollama':
+            # Ollama doesn't require API key validation
+            # Just check if URL is set
+            if not self.ollama_url.text().strip():
+                QMessageBox.warning(
+                    self,
+                    "Validation Error",
+                    "Please enter Ollama base URL (default: http://localhost:11434)"
                 )
                 return
 

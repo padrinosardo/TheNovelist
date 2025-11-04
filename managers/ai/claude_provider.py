@@ -127,6 +127,20 @@ class ClaudeProvider(AIProvider):
                 error=error_msg
             )
 
+    def get_available_models(self) -> list:
+        """
+        Get list of available Claude models
+
+        Returns:
+            list: List of model identifiers
+        """
+        return [
+            "claude-3-5-sonnet-20240620",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307"
+        ]
+
     def is_available(self) -> bool:
         """
         Check if Claude provider is available
