@@ -437,7 +437,8 @@ class TheNovelistMainWindow(QMainWindow):
             return
 
         # Get project data from dialog
-        title, author, language, project_type, genre, target_word_count, tags, use_template = dialog.get_project_data()
+        (title, author, language, project_type, genre, target_word_count, tags, use_template,
+         ai_provider_name, ai_provider_config) = dialog.get_project_data()
 
         # Get save location
         filepath, _ = QFileDialog.getSaveFileName(
@@ -469,7 +470,9 @@ class TheNovelistMainWindow(QMainWindow):
             genre=genre,
             target_word_count=target_word_count,
             tags=tags,
-            use_template=use_template
+            use_template=use_template,
+            ai_provider_name=ai_provider_name,
+            ai_provider_config=ai_provider_config
         )
 
         if success:
@@ -966,7 +969,7 @@ class TheNovelistMainWindow(QMainWindow):
         if success:
             # Refresh project tree to show updated info
             characters = self.project_manager.character_manager.get_all_characters()
-            manuscript_structure = self.project_manager.manuscript_structure_manager.manuscript_structure
+            manuscript_structure = self.project_manager.manuscript_structure_manager.get_structure()
             self.project_tree.load_project(updated_project, characters, manuscript_structure)
 
             # Update UI state

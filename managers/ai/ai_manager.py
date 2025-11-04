@@ -128,7 +128,7 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
 
     def get_provider(self, provider_name: Optional[str] = None) -> Optional[AIProvider]:
         """
-        Get an AI provider instance
+        Get an AI provider instance from GLOBAL configuration
 
         Args:
             provider_name: Provider name ('claude', 'openai', 'ollama')
@@ -164,6 +164,45 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
 
         except Exception as e:
             AppLogger.error(f"Error creating provider {provider_name}: {e}")
+            return None
+
+    def get_provider_from_project(self, project) -> Optional[AIProvider]:
+        """
+        Get an AI provider instance from PROJECT configuration (per-project AI)
+
+        This method uses the AI configuration stored in the project, allowing
+        different projects to use different AI providers and configurations.
+
+        Args:
+            project: Project model instance with ai_provider_name and ai_provider_config
+
+        Returns:
+            AIProvider: Provider instance or None if not available
+        """
+        provider_name = getattr(project, 'ai_provider_name', 'claude')
+        provider_config = getattr(project, 'ai_provider_config', {})
+
+        if provider_name not in self.PROVIDERS:
+            AppLogger.error(f"Unknown provider: {provider_name}")
+            return None
+
+        if not provider_config:
+            AppLogger.warning(f"No configuration for provider: {provider_name} in project")
+            return None
+
+        try:
+            provider_class = self.PROVIDERS[provider_name]
+            provider = provider_class(provider_config)
+
+            if not provider.is_available():
+                AppLogger.warning(f"Provider {provider_name} is not available (from project config)")
+                return None
+
+            AppLogger.info(f"Provider {provider_name} instantiated from project configuration")
+            return provider
+
+        except Exception as e:
+            AppLogger.error(f"Error creating provider {provider_name} from project: {e}")
             return None
 
     def set_active_provider(self, provider_name: str) -> bool:
@@ -274,7 +313,7 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
         """
         Generate AI response for character development WITH full dynamic context.
 
-        🆕 MILESTONE 3: Usa ContextBuilder per includere Story Context!
+        🆕 MILESTONE 5: Usa la configurazione AI del progetto (per-project AI)!
 
         This method builds a rich context from:
         - Project metadata (title, author, genre, type)
@@ -284,10 +323,10 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
 
         Args:
             character: Character model instance
-            project: Project model instance (with Story Context fields)
+            project: Project model instance (with Story Context fields AND AI config)
             character_manager: CharacterManager instance for relations
             messages: Conversation history (List[AIMessage])
-            provider_name: Optional provider name (uses active if None)
+            provider_name: DEPRECATED - uses project's AI configuration instead
             temperature: Override temperature
             max_tokens: Override max tokens
 
@@ -308,14 +347,19 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
 {context}
 """
 
-        # 3. Call provider with enriched context
-        provider = self.get_provider(provider_name)
+        # 3. 🆕 Get provider from PROJECT configuration (per-project AI)
+        provider = self.get_provider_from_project(project)
+
+        if not provider:
+            # Fallback to global config if project config is not available
+            AppLogger.warning("Project AI config not available, falling back to global config")
+            provider = self.get_provider(provider_name)
 
         if not provider:
             return AIResponse(
                 content="",
                 success=False,
-                error="No AI provider available. Please configure an API key in settings."
+                error="No AI provider available. Please configure an API key in Project Info."
             )
 
         return provider.generate(

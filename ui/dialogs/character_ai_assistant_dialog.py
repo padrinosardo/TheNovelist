@@ -113,6 +113,10 @@ class CharacterAIAssistantDialog(QDialog):
         header.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         main_layout.addWidget(header)
 
+        # AI Provider Indicator (shows which AI is configured for this project)
+        ai_provider_indicator = self._create_ai_provider_indicator()
+        main_layout.addWidget(ai_provider_indicator)
+
         info = QLabel("Collaborate with AI to develop your character's details")
         info.setStyleSheet("color: #666; font-style: italic;")
         main_layout.addWidget(info)
@@ -262,6 +266,49 @@ class CharacterAIAssistantDialog(QDialog):
         tips.setWordWrap(True)
         tips.setStyleSheet("color: #666; font-size: 11px; font-style: italic; padding: 5px;")
         main_layout.addWidget(tips)
+
+    def _create_ai_provider_indicator(self) -> QLabel:
+        """
+        Create a visual indicator showing which AI provider is configured for this project
+
+        Returns:
+            QLabel: Styled label with provider icon and name
+        """
+        # Get provider from project configuration
+        provider_name = getattr(self.project, 'ai_provider_name', 'claude')
+        provider_config = getattr(self.project, 'ai_provider_config', {})
+
+        # Map provider names to icons and display names
+        provider_info = {
+            'claude': ('🟣', 'Claude (Anthropic)'),
+            'openai': ('🟢', 'OpenAI (GPT)'),
+            'ollama': ('🔵', 'Ollama (Local)')
+        }
+
+        icon, display_name = provider_info.get(provider_name, ('🤖', provider_name.capitalize()))
+
+        # Get model info if available
+        model = provider_config.get('model', '')
+        model_info = f" - {model}" if model else ""
+
+        # Create styled label
+        indicator = QLabel(f"{icon} <b>AI Provider:</b> {display_name}{model_info}")
+        indicator.setStyleSheet("""
+            QLabel {
+                background-color: #e8f5e9;
+                border: 1px solid #4CAF50;
+                border-radius: 5px;
+                padding: 8px 12px;
+                font-size: 12px;
+                color: #2e7d32;
+            }
+        """)
+        indicator.setToolTip(
+            f"This project is configured to use {display_name} for AI character development.\n"
+            f"You can change this in Project Info → AI Provider Configuration."
+        )
+
+        return indicator
 
     def _load_conversation_history(self):
         """Load conversation history from character"""

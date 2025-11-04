@@ -60,7 +60,8 @@ class ProjectManager:
 
     def create_new_project(self, title: str, author: str, filepath: str, language: str = 'it',
                           project_type: ProjectType = ProjectType.NOVEL, genre: str = "",
-                          target_word_count: int = 0, tags: List[str] = None, use_template: bool = True) -> bool:
+                          target_word_count: int = 0, tags: List[str] = None, use_template: bool = True,
+                          ai_provider_name: str = "claude", ai_provider_config: dict = None) -> bool:
         """
         Create a new project and save it as a ZIP file
 
@@ -74,6 +75,8 @@ class ProjectManager:
             target_word_count: Target word count (optional)
             tags: List of tags (optional)
             use_template: Whether to use a base template for the project type (default: True)
+            ai_provider_name: AI provider name (default: 'claude')
+            ai_provider_config: AI provider configuration (optional)
 
         Returns:
             bool: True if successful, False otherwise
@@ -91,7 +94,9 @@ class ProjectManager:
                 project_type=project_type,
                 genre=genre,
                 target_word_count=target_word_count,
-                tags=tags if tags is not None else []
+                tags=tags if tags is not None else [],
+                ai_provider_name=ai_provider_name,
+                ai_provider_config=ai_provider_config
             )
 
             # Create temporary directory for project structure

@@ -146,6 +146,22 @@ class AIMessageBubble(QFrame):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.message)
 
+        # Provide visual feedback
+        sender = self.sender()
+        if sender:
+            original_text = sender.text()
+            sender.setText("✅ Copied!")
+            sender.setEnabled(False)
+
+            # Reset after 2 seconds
+            QTimer.singleShot(2000, lambda: self._reset_copy_button(sender, original_text))
+
+    def _reset_copy_button(self, button, original_text):
+        """Reset copy button to original state"""
+        if button:
+            button.setText(original_text)
+            button.setEnabled(True)
+
     def _insert_selected_text(self):
         """Emit signal with selected text (or full text if none selected)"""
         cursor = self.text_edit.textCursor()

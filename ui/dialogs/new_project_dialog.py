@@ -12,6 +12,8 @@ from typing import Optional, Tuple, List
 from models.project_type import ProjectType
 from models.container_type import ContainerType
 from utils.validators import Validators
+from ui.components.ai_config_widget import AIConfigWidget
+from managers.ai import AIManager
 
 
 class NewProjectDialog(QDialog):
@@ -221,6 +223,37 @@ class NewProjectDialog(QDialog):
         metadata_group.setLayout(metadata_layout)
         scroll_layout.addWidget(metadata_group)
 
+        # === AI CONFIGURATION GROUP ===
+        ai_group = QGroupBox("AI Provider Configuration")
+        ai_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #E91E63;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        ai_layout = QVBoxLayout()
+
+        ai_info = QLabel("🤖 Configure which AI assistant to use for character development in this project")
+        ai_info.setWordWrap(True)
+        ai_info.setStyleSheet("color: #666; font-style: italic;")
+        ai_layout.addWidget(ai_info)
+
+        # Initialize AI manager and widget
+        self.ai_manager = AIManager()
+        self.ai_config_widget = AIConfigWidget(self.ai_manager)
+        ai_layout.addWidget(self.ai_config_widget)
+
+        ai_group.setLayout(ai_layout)
+        scroll_layout.addWidget(ai_group)
+
         # === CONTAINERS PREVIEW GROUP ===
         containers_group = QGroupBox("Available Containers for this Project Type")
         containers_group.setStyleSheet("""
@@ -410,6 +443,17 @@ class NewProjectDialog(QDialog):
         # Get template preference
         use_template = self.use_template_checkbox.isChecked()
 
+        # Validate AI configuration (optional - API key not required)
+        is_valid, error_msg = self.ai_config_widget.validate(require_api_key=False)
+        if not is_valid:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Invalid AI Configuration", error_msg)
+            return
+
+        # Get AI configuration
+        ai_provider_name = self.ai_config_widget.get_provider_name()
+        ai_provider_config = self.ai_config_widget.get_config()
+
         # Store values
         self._title = title
         self._author = author
@@ -419,16 +463,19 @@ class NewProjectDialog(QDialog):
         self._target_word_count = target_word_count
         self._tags = tags
         self._use_template = use_template
+        self._ai_provider_name = ai_provider_name
+        self._ai_provider_config = ai_provider_config
 
         # Accept dialog
         self.accept()
 
-    def get_project_data(self) -> Tuple[str, str, str, ProjectType, str, int, List[str], bool]:
+    def get_project_data(self) -> Tuple[str, str, str, ProjectType, str, int, List[str], bool, str, dict]:
         """
         Get the project data entered by the user.
 
         Returns:
-            Tuple: (title, author, language, project_type, genre, target_word_count, tags, use_template)
+            Tuple: (title, author, language, project_type, genre, target_word_count, tags, use_template,
+                    ai_provider_name, ai_provider_config)
         """
         return (
             self._title,
@@ -438,5 +485,7 @@ class NewProjectDialog(QDialog):
             self._genre,
             self._target_word_count,
             self._tags,
-            self._use_template
+            self._use_template,
+            self._ai_provider_name,
+            self._ai_provider_config
         )

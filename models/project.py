@@ -55,12 +55,23 @@ class Project:
     # AI Custom Commands (Milestone 3)
     ai_commands: List[dict] = field(default_factory=list)  # Custom AI commands for this project
 
+    # AI Provider Configuration (Milestone 5) - PER-PROJECT AI
+    ai_provider_name: str = "claude"  # Active AI provider: 'claude', 'openai', 'ollama'
+    ai_provider_config: dict = field(default_factory=lambda: {
+        'api_key': '',
+        'model': 'claude-3-haiku-20240307',
+        'temperature': 0.7,
+        'max_tokens': 2000
+    })  # Provider-specific configuration
+
     @classmethod
     def create_new(cls, title: str, author: str, language: str = "it",
                    project_type: ProjectType = ProjectType.NOVEL,
                    genre: str = "", target_word_count: int = 0,
                    tags: List[str] = None,
-                   include_default_commands: bool = True) -> 'Project':
+                   include_default_commands: bool = True,
+                   ai_provider_name: str = "claude",
+                   ai_provider_config: dict = None) -> 'Project':
         """
         Create a new project with current timestamps
 
@@ -73,6 +84,8 @@ class Project:
             target_word_count: Target word count (optional)
             tags: List of tags (optional)
             include_default_commands: Whether to include default AI commands (default: True)
+            ai_provider_name: AI provider name (default: 'claude')
+            ai_provider_config: AI provider configuration (optional)
 
         Returns:
             Project: New Project instance
@@ -89,6 +102,15 @@ class Project:
                 # If default_commands module is not available, continue without them
                 pass
 
+        # Default AI config if not provided
+        if ai_provider_config is None:
+            ai_provider_config = {
+                'api_key': '',
+                'model': 'claude-3-haiku-20240307',
+                'temperature': 0.7,
+                'max_tokens': 2000
+            }
+
         return cls(
             title=title,
             author=author,
@@ -100,7 +122,9 @@ class Project:
             genre=genre,
             target_word_count=target_word_count,
             tags=tags if tags is not None else [],
-            ai_commands=ai_commands
+            ai_commands=ai_commands,
+            ai_provider_name=ai_provider_name,
+            ai_provider_config=ai_provider_config
         )
 
     def update_modified_date(self):
@@ -138,7 +162,10 @@ class Project:
             'ai_writing_guide_enabled': self.ai_writing_guide_enabled,
             'ai_writing_guide_content': self.ai_writing_guide_content,
             # AI Custom Commands
-            'ai_commands': self.ai_commands
+            'ai_commands': self.ai_commands,
+            # AI Provider Configuration (Milestone 5)
+            'ai_provider_name': self.ai_provider_name,
+            'ai_provider_config': self.ai_provider_config
         }
 
     @classmethod
@@ -185,5 +212,13 @@ class Project:
             ai_writing_guide_enabled=data.get('ai_writing_guide_enabled', False),
             ai_writing_guide_content=data.get('ai_writing_guide_content', ''),
             # AI Custom Commands (backward compatible)
-            ai_commands=data.get('ai_commands', [])
+            ai_commands=data.get('ai_commands', []),
+            # AI Provider Configuration (Milestone 5 - backward compatible)
+            ai_provider_name=data.get('ai_provider_name', 'claude'),
+            ai_provider_config=data.get('ai_provider_config', {
+                'api_key': '',
+                'model': 'claude-3-haiku-20240307',
+                'temperature': 0.7,
+                'max_tokens': 2000
+            })
         )

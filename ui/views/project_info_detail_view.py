@@ -18,6 +18,8 @@ from ui.dialogs.context_preview_dialog import ContextPreviewDialog
 from managers.ai.context_builder import CharacterContextBuilder
 from managers.character_manager import CharacterManager
 from ui.utils.project_utils import ProjectUtils
+from ui.components.ai_config_widget import AIConfigWidget
+from managers.ai import AIManager
 
 
 class ProjectInfoDetailView(QWidget):
@@ -600,6 +602,31 @@ class ProjectInfoDetailView(QWidget):
 
         layout.addLayout(commands_button_layout)
 
+        # === AI PROVIDER CONFIGURATION ===
+        layout.addSpacing(15)
+        ai_provider_separator = QFrame()
+        ai_provider_separator.setFrameShape(QFrame.Shape.HLine)
+        ai_provider_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(ai_provider_separator)
+
+        ai_provider_label = QLabel("🤖 AI Provider Configuration")
+        ai_provider_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        layout.addWidget(ai_provider_label)
+
+        ai_provider_desc = QLabel(
+            "Choose which AI provider to use for character development in this project. "
+            "This configuration is per-project - different projects can use different AIs. "
+            "API keys are optional and can be configured later."
+        )
+        ai_provider_desc.setWordWrap(True)
+        ai_provider_desc.setStyleSheet("color: #666; font-size: 11px; padding: 5px 0;")
+        layout.addWidget(ai_provider_desc)
+
+        # AI Config Widget
+        self.ai_manager = AIManager()
+        self.ai_config_widget = AIConfigWidget(self.ai_manager)
+        layout.addWidget(self.ai_config_widget)
+
         # === PROJECT DATES (Read-Only) ===
         layout.addSpacing(10)
         dates_separator = QFrame()
@@ -751,6 +778,9 @@ class ProjectInfoDetailView(QWidget):
         commands_count = len(project.ai_commands)
         self.commands_info_label.setText(f"Current commands: {commands_count}")
 
+        # Load AI Provider Configuration
+        self.ai_config_widget.set_config(project.ai_provider_name, project.ai_provider_config)
+
     def _update_project_type_combo_labels(self, language: str):
         """
         Update project type combo box labels based on language
@@ -846,7 +876,10 @@ class ProjectInfoDetailView(QWidget):
             ai_writing_guide_enabled=self.ai_guide_enabled_checkbox.isChecked(),
             ai_writing_guide_content=self.ai_guide_editor.get_content(),
             # AI Custom Commands
-            ai_commands=self._current_project.ai_commands
+            ai_commands=self._current_project.ai_commands,
+            # AI Provider Configuration
+            ai_provider_name=self.ai_config_widget.get_provider_name(),
+            ai_provider_config=self.ai_config_widget.get_config()
         )
 
         return updated_project
