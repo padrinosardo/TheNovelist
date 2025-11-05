@@ -56,6 +56,7 @@ class Project:
     ai_commands: List[dict] = field(default_factory=list)  # Custom AI commands for this project
 
     # AI Provider Configuration (Milestone 5) - PER-PROJECT AI
+    ai_enabled: bool = True  # Whether AI is enabled for this project
     ai_provider_name: str = "claude"  # Active AI provider: 'claude', 'openai', 'ollama'
     ai_provider_config: dict = field(default_factory=lambda: {
         'api_key': '',
@@ -63,6 +64,9 @@ class Project:
         'temperature': 0.7,
         'max_tokens': 2000
     })  # Provider-specific configuration
+
+    # AI Writing Template (Milestone 6)
+    ai_writing_template: str = "default"  # Selected template ID for AI writing guide
 
     @classmethod
     def create_new(cls, title: str, author: str, language: str = "it",
@@ -142,7 +146,8 @@ class Project:
             'title': self.title,
             'author': self.author,
             'language': self.language,
-            'project_type': self.project_type.value,  # Save as string
+            # Handle both enum and string project_type
+            'project_type': self.project_type.value if hasattr(self.project_type, 'value') else self.project_type,
             'created_date': self.created_date,
             'modified_date': self.modified_date,
             'genre': self.genre,
@@ -165,7 +170,9 @@ class Project:
             'ai_commands': self.ai_commands,
             # AI Provider Configuration (Milestone 5)
             'ai_provider_name': self.ai_provider_name,
-            'ai_provider_config': self.ai_provider_config
+            'ai_provider_config': self.ai_provider_config,
+            # AI Writing Template (Milestone 6)
+            'ai_writing_template': self.ai_writing_template
         }
 
     @classmethod
@@ -220,5 +227,7 @@ class Project:
                 'model': 'claude-3-haiku-20240307',
                 'temperature': 0.7,
                 'max_tokens': 2000
-            })
+            }),
+            # AI Writing Template (Milestone 6 - backward compatible)
+            ai_writing_template=data.get('ai_writing_template', 'default')
         )

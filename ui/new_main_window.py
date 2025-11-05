@@ -13,11 +13,14 @@ from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
                       NotesListView, ProjectInfoDetailView)
+from ui.views.project_info import (GeneralInfoView, AIProviderConfigView, AIWritingGuideView)
+from managers.ai.template_manager import TemplateManager
 from ui.dialogs import (TimelineEventDialog, SourceDetailDialog, NoteDetailDialog)
 from ui.styles import Stili
 from managers.project_manager import ProjectManager
 from managers.ai.ai_manager import AIManager
 from workers.thread_analysis import AnalysisThread
+from models.project_type import ProjectType
 from analysis.grammar import GrammarAnalyzer
 from analysis.repetition import RepetitionAnalyzer
 from analysis.style import StyleAnalyzer
@@ -116,6 +119,12 @@ class TheNovelistMainWindow(QMainWindow):
         self.statistics_dashboard = StatisticsDashboard()
         self.project_info_view = ProjectInfoDetailView()
 
+        # New modular Project Info views
+        self.general_info_view = GeneralInfoView()
+        self.ai_provider_config_view = AIProviderConfigView(ai_manager=self.ai_manager)
+        self.template_manager = TemplateManager()
+        self.ai_writing_guide_view = AIWritingGuideView(template_manager=self.template_manager)
+
         # Dynamic container views
         self.location_list_view = LocationListView()
         self.location_detail_view = LocationDetailView(
@@ -141,6 +150,11 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace.add_view(WorkspaceContainer.VIEW_CHARACTER_DETAIL, self.character_detail_view)
         self.workspace.add_view(WorkspaceContainer.VIEW_STATISTICS, self.statistics_dashboard)
         self.workspace.add_view(WorkspaceContainer.VIEW_PROJECT_INFO, self.project_info_view)
+
+        # Add new modular Project Info sub-views
+        self.workspace.add_view(WorkspaceContainer.VIEW_GENERAL_INFO, self.general_info_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_AI_PROVIDER_CONFIG, self.ai_provider_config_view)
+        self.workspace.add_view(WorkspaceContainer.VIEW_AI_WRITING_GUIDE, self.ai_writing_guide_view)
 
         # Add dynamic container views
         self.workspace.add_view(WorkspaceContainer.VIEW_LOCATIONS, self.location_list_view)
@@ -174,11 +188,11 @@ class TheNovelistMainWindow(QMainWindow):
         self.progress.setStyleSheet(Stili.progress_bar())
         self.statusBar().addPermanentWidget(self.progress)
 
-        # Language indicator
-        self.language_label = QLabel()
-        self.language_label.setStyleSheet("color: #666; font-size: 11px; margin-right: 10px; padding: 2px 6px; background-color: #f0f0f0; border-radius: 3px;")
-        self.language_label.setVisible(False)
-        self.statusBar().addPermanentWidget(self.language_label)
+        # AI Provider indicator
+        self.ai_provider_label = QLabel()
+        self.ai_provider_label.setStyleSheet("color: palette(window-text); font-size: 11px; margin-right: 10px; padding: 2px 6px; background-color: palette(light); border-radius: 3px;")
+        self.ai_provider_label.setVisible(False)
+        self.statusBar().addPermanentWidget(self.ai_provider_label)
 
         # Auto-save indicator
         self.auto_save_label = QLabel()
@@ -241,6 +255,11 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.character_selected.connect(self._show_character_detail)
         self.project_tree.statistics_selected.connect(self._show_statistics)
         self.project_tree.project_info_selected.connect(self._show_project_info)
+
+        # New Project Info sub-sections signals
+        self.project_tree.general_info_selected.connect(self._show_general_info)
+        self.project_tree.ai_provider_config_selected.connect(self._show_ai_provider_config)
+        self.project_tree.ai_writing_guide_selected.connect(self._show_ai_writing_guide)
 
         # Dynamic container selection signals
         self.project_tree.locations_selected.connect(self._show_locations)
@@ -390,22 +409,30 @@ class TheNovelistMainWindow(QMainWindow):
         """Update the language indicator in status bar"""
         if self.project_manager.has_project():
             language = self.project_manager.current_project.language
-            # Map language codes to display names with flags
-            language_names = {
-                'it': '🇮🇹 IT',
-                'en': '🇬🇧 EN',
-                'es': '🇪🇸 ES',
-                'fr': '🇫🇷 FR',
-                'de': '🇩🇪 DE'
-            }
-            display_name = language_names.get(language, language.upper())
-            self.language_label.setText(display_name)
-            self.language_label.setVisible(True)
+            ai_enabled = getattr(self.project_manager.current_project, 'ai_enabled', True)
+            ai_provider = self.project_manager.current_project.ai_provider_name
+
+            # Check if AI is disabled
+            if not ai_enabled:
+                display_name = '⭕ NO AI'
+            else:
+                # Map AI providers to display names with icons
+                ai_provider_names = {
+                    'claude': '🤖 Claude',
+                    'openai': '🤖 OpenAI',
+                    'ollama': '🤖 Ollama',
+                    'none': '⭕ NO AI',
+                    '': '⭕ NO AI'
+                }
+                display_name = ai_provider_names.get(ai_provider, '🤖 ' + ai_provider.upper() if ai_provider else '⭕ NO AI')
+
+            self.ai_provider_label.setText(display_name)
+            self.ai_provider_label.setVisible(True)
 
             # Update analyzers with project language
             self._update_analyzers_language(language)
         else:
-            self.language_label.setVisible(False)
+            self.ai_provider_label.setVisible(False)
 
     def _update_analyzers_language(self, language: str):
         """Update all analyzers to use the specified language"""
@@ -990,6 +1017,189 @@ class TheNovelistMainWindow(QMainWindow):
                 "Save Failed",
                 "Failed to save project information. Please try again."
             )
+
+    # === NEW MODULAR PROJECT INFO VIEWS ===
+
+    def _show_general_info(self):
+        """Show general info view with auto-save"""
+        if not self.project_manager.has_project():
+            return
+
+        project = self.project_manager.current_project
+        self.general_info_view.load_project(project)
+        self.workspace.show_general_info()
+
+        # Connect auto-save signal if not already connected
+        try:
+            self.general_info_view.auto_save_requested.disconnect()
+        except:
+            pass
+        self.general_info_view.auto_save_requested.connect(self._on_general_info_auto_save)
+
+    def _show_ai_provider_config(self):
+        """Show AI provider configuration view with auto-save"""
+        if not self.project_manager.has_project():
+            return
+
+        project = self.project_manager.current_project
+        self.ai_provider_config_view.load_project(project)
+        self.workspace.show_ai_provider_config()
+
+        # Connect auto-save signal if not already connected
+        try:
+            self.ai_provider_config_view.auto_save_requested.disconnect()
+        except:
+            pass
+        self.ai_provider_config_view.auto_save_requested.connect(self._on_ai_provider_auto_save)
+
+    def _show_ai_writing_guide(self):
+        """Show AI writing guide view with auto-save"""
+        if not self.project_manager.has_project():
+            return
+
+        project = self.project_manager.current_project
+        self.ai_writing_guide_view.load_project(project)
+        self.workspace.show_ai_writing_guide()
+
+        # Connect auto-save signal if not already connected
+        try:
+            self.ai_writing_guide_view.auto_save_requested.disconnect()
+        except:
+            pass
+        self.ai_writing_guide_view.auto_save_requested.connect(self._on_ai_writing_guide_auto_save)
+
+    def _on_general_info_auto_save(self, data: dict):
+        """Handle auto-save for general info"""
+        if not self.project_manager.has_project():
+            return
+
+        try:
+            project = self.project_manager.current_project
+
+            # Debug logging
+            print(f"[DEBUG] Auto-save general info - received data keys: {data.keys()}")
+            print(f"[DEBUG] Setting time period: '{data.get('setting_time_period')}'")
+            print(f"[DEBUG] Setting location: '{data.get('setting_location')}'")
+            print(f"[DEBUG] Narrative tone: '{data.get('narrative_tone')}'")
+            print(f"[DEBUG] Themes: {data.get('themes')}")
+            print(f"[DEBUG] Target audience: '{data.get('target_audience')}'")
+            print(f"[DEBUG] Story notes: '{data.get('story_notes')}'")
+
+            # Update project with new data
+            project.title = data.get('title', project.title)
+            project.author = data.get('author', project.author)
+            project.language = data.get('language', project.language)
+            project.genre = data.get('genre', project.genre)
+            # Convert project_type string to enum
+            pt_value = data.get('project_type')
+            if pt_value:
+                project.project_type = ProjectType(pt_value)
+            project.tags = data.get('tags', project.tags)
+            project.synopsis = data.get('synopsis', project.synopsis)
+            project.setting_time_period = data.get('setting_time_period', project.setting_time_period)
+            project.setting_location = data.get('setting_location', project.setting_location)
+            project.narrative_tone = data.get('narrative_tone', project.narrative_tone)
+            project.narrative_pov = data.get('narrative_pov', project.narrative_pov)
+            project.themes = data.get('themes', project.themes)
+            project.target_audience = data.get('target_audience', project.target_audience)
+            project.story_notes = data.get('story_notes', project.story_notes)
+
+            # Debug logging - what was saved
+            print(f"[DEBUG] After update - setting_time_period: '{project.setting_time_period}'")
+            print(f"[DEBUG] After update - setting_location: '{project.setting_location}'")
+            print(f"[DEBUG] After update - narrative_tone: '{project.narrative_tone}'")
+            print(f"[DEBUG] After update - themes: {project.themes}")
+            print(f"[DEBUG] After update - target_audience: '{project.target_audience}'")
+            print(f"[DEBUG] After update - story_notes: '{project.story_notes}'")
+
+            # Update modified date
+            project.update_modified_date()
+
+            # Mark as modified
+            self.is_modified = True
+
+            # Save project
+            success = self.project_manager.save_project()
+
+            print(f"[DEBUG] Save success: {success}")
+
+            if success:
+                self.general_info_view.on_save_success()
+                # Don't call _update_ui_state() to avoid changing the current view
+            else:
+                self.general_info_view.on_save_error("Failed to save")
+
+        except Exception as e:
+            print(f"[DEBUG] Exception in auto-save: {e}")
+            import traceback
+            traceback.print_exc()
+            self.general_info_view.on_save_error(str(e))
+
+    def _on_ai_provider_auto_save(self, data: dict):
+        """Handle auto-save for AI provider configuration"""
+        if not self.project_manager.has_project():
+            return
+
+        try:
+            project = self.project_manager.current_project
+
+            # Update AI configuration (use ai_enabled, ai_provider_name and ai_provider_config)
+            config = data.get('config', {})
+            project.ai_enabled = config.get('ai_enabled', True)
+            project.ai_provider_name = data.get('provider_name')
+            project.ai_provider_config = config
+
+            # Update modified date
+            project.update_modified_date()
+
+            # Mark as modified
+            self.is_modified = True
+
+            # Save project
+            success = self.project_manager.save_project()
+
+            if success:
+                self.ai_provider_config_view.on_save_success()
+                # Update AI provider indicator in status bar
+                self._update_language_indicator()
+                # Don't call _update_ui_state() to avoid changing the current view
+            else:
+                self.ai_provider_config_view.on_save_error("Failed to save")
+
+        except Exception as e:
+            self.ai_provider_config_view.on_save_error(str(e))
+
+    def _on_ai_writing_guide_auto_save(self, data: dict):
+        """Handle auto-save for AI writing guide"""
+        if not self.project_manager.has_project():
+            return
+
+        try:
+            project = self.project_manager.current_project
+
+            # Update AI writing guide settings (use ai_commands)
+            project.ai_writing_template = data.get('selected_template')
+            project.ai_commands = data.get('custom_commands')
+
+            # Update modified date
+            project.update_modified_date()
+
+            # Mark as modified
+            self.is_modified = True
+
+            # Save project
+            success = self.project_manager.save_project()
+
+            if success:
+                self.ai_writing_guide_view.on_save_success()
+                # Don't call _update_ui_state() to avoid changing the current view
+            else:
+                self.ai_writing_guide_view.on_save_error("Failed to save")
+
+        except Exception as e:
+            self.ai_writing_guide_view.on_save_error(str(e))
+
+    # === END NEW MODULAR PROJECT INFO VIEWS ===
 
     def _refresh_statistics(self):
         """Refresh statistics data"""

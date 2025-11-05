@@ -9,7 +9,7 @@ This widget provides a unified interface for configuring AI providers
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QComboBox, QLineEdit,
-    QPushButton, QLabel, QHBoxLayout, QMessageBox
+    QPushButton, QLabel, QHBoxLayout, QMessageBox, QCheckBox
 )
 from PySide6.QtCore import Signal
 from typing import Optional
@@ -40,6 +40,19 @@ class AIConfigWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
+        # Enable AI checkbox
+        self.enable_ai_checkbox = QCheckBox("Enable AI assistance for this project")
+        self.enable_ai_checkbox.setChecked(True)
+        self.enable_ai_checkbox.setToolTip("Uncheck to disable all AI features for this project")
+        self.enable_ai_checkbox.setStyleSheet("""
+            QCheckBox {
+                font-weight: bold;
+                font-size: 13px;
+                padding: 5px;
+            }
+        """)
+        layout.addWidget(self.enable_ai_checkbox)
+
         form = QFormLayout()
         form.setSpacing(10)
 
@@ -62,9 +75,13 @@ class AIConfigWidget(QWidget):
         # Model selection (dynamic based on provider)
         self.model_combo = QComboBox()
         self.model_combo.setToolTip("AI model to use")
-        form.addRow("Model:", self.model_combo)
+        self.model_combo_label = QLabel("Model:")
+        form.addRow(self.model_combo_label, self.model_combo)
 
         layout.addLayout(form)
+
+        # Store form container for enabling/disabling
+        self.form_container = form
 
         # Test connection button
         test_layout = QHBoxLayout()
@@ -111,11 +128,24 @@ class AIConfigWidget(QWidget):
 
     def _connect_signals(self):
         """Connect signals"""
+        self.enable_ai_checkbox.stateChanged.connect(self._on_enable_ai_changed)
+        self.enable_ai_checkbox.stateChanged.connect(lambda: self.config_changed.emit())
         self.provider_combo.currentIndexChanged.connect(self._update_provider_fields)
         self.provider_combo.currentIndexChanged.connect(lambda: self.config_changed.emit())
         self.api_key_input.textChanged.connect(lambda: self.config_changed.emit())
         self.model_combo.currentIndexChanged.connect(lambda: self.config_changed.emit())
         self.test_btn.clicked.connect(self._test_connection)
+
+    def _on_enable_ai_changed(self):
+        """Handle enable/disable AI checkbox state change"""
+        enabled = self.enable_ai_checkbox.isChecked()
+
+        # Enable/disable all AI provider fields
+        self.provider_combo.setEnabled(enabled)
+        self.api_key_input.setEnabled(enabled)
+        self.model_combo.setEnabled(enabled)
+        self.test_btn.setEnabled(enabled)
+        self.info_label.setEnabled(enabled)
 
     def _update_provider_fields(self):
         """Update fields based on selected provider"""
@@ -237,10 +267,11 @@ class AIConfigWidget(QWidget):
         Get current AI configuration
 
         Returns:
-            dict: AI provider configuration
+            dict: AI provider configuration with 'ai_enabled' field
         """
         provider = self.provider_combo.currentData()
         config = {
+            'ai_enabled': self.enable_ai_checkbox.isChecked(),
             'model': self.model_combo.currentData(),
             'temperature': 0.7,
             'max_tokens': 2000
@@ -265,14 +296,19 @@ class AIConfigWidget(QWidget):
         """
         return self.provider_combo.currentData()
 
-    def set_config(self, provider_name: str, config: dict):
+    def set_config(self, provider_name: str, config: dict, ai_enabled: bool = True):
         """
         Load configuration into widget
 
         Args:
             provider_name: Provider name to select
             config: Configuration dictionary
+            ai_enabled: Whether AI is enabled (default: True)
         """
+        # Set AI enabled state
+        self.enable_ai_checkbox.setChecked(ai_enabled)
+        self._on_enable_ai_changed()  # Update widget states
+
         # Set provider
         index = self.provider_combo.findData(provider_name)
         if index >= 0:
