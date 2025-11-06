@@ -26,6 +26,11 @@ class WorkspaceContainer(QStackedWidget):
     VIEW_STATISTICS = "statistics"
     VIEW_PROJECT_INFO = "project_info"
 
+    # Project Info sub-views
+    VIEW_GENERAL_INFO = "general_info"
+    VIEW_AI_PROVIDER_CONFIG = "ai_provider_config"
+    VIEW_AI_WRITING_GUIDE = "ai_writing_guide"
+
     # Dynamic container views
     VIEW_LOCATIONS = "locations"
     VIEW_RESEARCH = "research"
@@ -113,3 +118,15 @@ class WorkspaceContainer(QStackedWidget):
     def show_project_info(self):
         """Show the project info detail view"""
         self.show_view(self.VIEW_PROJECT_INFO)
+
+    def show_general_info(self):
+        """Show the general info view"""
+        self.show_view(self.VIEW_GENERAL_INFO)
+
+    def show_ai_provider_config(self):
+        """Show the AI provider configuration view"""
+        self.show_view(self.VIEW_AI_PROVIDER_CONFIG)
+
+    def show_ai_writing_guide(self):
+        """Show the AI writing guide view"""
+        self.show_view(self.VIEW_AI_WRITING_GUIDE)

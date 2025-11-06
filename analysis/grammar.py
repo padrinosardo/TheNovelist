@@ -5,6 +5,15 @@ from analysis.grammar_rules import SimpleGrammarChecker
 from analysis.nlp_manager import nlp_manager
 from utils.logger import AppLogger
 from typing import Optional
+import re
+
+# Import spell checker
+try:
+    from spellchecker import SpellChecker
+    SPELL_CHECKER_AVAILABLE = True
+except ImportError:
+    SPELL_CHECKER_AVAILABLE = False
+    AppLogger.warning("PySpellChecker not available - spelling errors won't be detected in analysis")
 
 
 class GrammarAnalyzer:
@@ -19,6 +28,18 @@ class GrammarAnalyzer:
         """
         self.language = language
         self.checker = SimpleGrammarChecker()  # Fallback per italiano
+
+        # Initialize spell checker if available
+        self.spell_checker = None
+        if SPELL_CHECKER_AVAILABLE:
+            try:
+                self.spell_checker = SpellChecker(language=language)
+                AppLogger.info(f"Spell checker initialized for language: {language}")
+            except Exception as e:
+                AppLogger.warning(f"Could not initialize spell checker: {e}")
+
+        # Word pattern for spell checking (same as spell_check_highlighter.py)
+        self.word_pattern = re.compile(r'\b[a-zA-ZàèéìòùÀÈÉÌÒÙáéíóúÁÉÍÓÚäëïöüÄËÏÖÜâêîôûÂÊÎÔÛçÇñÑ]+\b')
 
         # Imposta lingua nel manager
         nlp_manager.set_language(language)
@@ -37,9 +58,77 @@ class GrammarAnalyzer:
             self.language = language
             nlp_manager.set_language(language)
 
+            # Re-initialize spell checker for new language
+            if SPELL_CHECKER_AVAILABLE:
+                try:
+                    self.spell_checker = SpellChecker(language=language)
+                    AppLogger.info(f"Spell checker re-initialized for language: {language}")
+                except Exception as e:
+                    AppLogger.warning(f"Could not re-initialize spell checker: {e}")
+                    self.spell_checker = None
+
+    def _check_spelling(self, text: str):
+        """
+        Check text for spelling errors
+
+        Args:
+            text: Text to check
+
+        Returns:
+            list: List of spelling errors in same format as grammar errors
+        """
+        if not self.spell_checker:
+            return []
+
+        spelling_errors = []
+
+        # Get exclusion zones from grammar checker to skip HTML/URLs
+        _, exclusions = self.checker._preprocess_text(text)
+
+        # Find all words in text
+        for match in self.word_pattern.finditer(text):
+            word = match.group()
+            start_pos = match.start()
+            end_pos = match.end()
+
+            # Skip if word is in exclusion zone (HTML, URL, etc.)
+            if self.checker._match_overlaps_exclusion(start_pos, end_pos, exclusions):
+                continue
+
+            # Skip numbers, single letters, all uppercase (likely acronyms)
+            if len(word) <= 1 or word.isupper() or word.isdigit():
+                continue
+
+            # Skip capitalized words (likely proper nouns) unless obviously wrong
+            if word[0].isupper() and len(word) > 1:
+                # Only check if it looks suspicious (e.g., "Torrrrone")
+                if not any(c * 3 in word.lower() for c in 'abcdefghilmnopqrstuvz'):
+                    continue
+
+            # Check if word is misspelled
+            word_lower = word.lower()
+            if self.spell_checker.unknown([word_lower]):
+                # Get suggestion
+                suggestion = self.spell_checker.correction(word_lower)
+                if suggestion and suggestion != word_lower:
+                    # Get context
+                    context = self.checker._get_context(text, start_pos, end_pos)
+
+                    spelling_errors.append({
+                        'start': start_pos,
+                        'end': end_pos,
+                        'message': f"Possibile errore di ortografia",
+                        'original': word,
+                        'suggestion': suggestion if word[0].isupper() else suggestion,
+                        'category': 'spelling',
+                        'context': context
+                    })
+
+        return spelling_errors
+
     def analyze(self, text, max_errors=30):
         """
-        Analyze text to find grammatical errors
+        Analyze text to find grammatical and spelling errors
 
         Args:
             text: Text to analyze
@@ -49,19 +138,31 @@ class GrammarAnalyzer:
             dict: Dictionary with 'errors' and 'total_errors'
         """
         try:
-            # Se italiano, usa SimpleGrammarChecker (regole custom)
+            # Se italiano, usa SimpleGrammarChecker (regole custom) + spell checker
             if self.language == 'it':
-                errors = self.checker.check(text)
+                # Get grammar errors
+                grammar_errors = self.checker.check(text)
+
+                # Get spelling errors
+                spelling_errors = self._check_spelling(text)
+
+                # Combine all errors
+                all_errors = grammar_errors + spelling_errors
+
+                # Sort by position in text
+                all_errors.sort(key=lambda e: e.get('start', 0))
 
                 # Group by category
                 by_category = {}
-                for error in errors:
+                for error in all_errors:
                     cat = error['category']
                     by_category[cat] = by_category.get(cat, 0) + 1
 
+                AppLogger.info(f"Grammar analysis found {len(grammar_errors)} grammar errors and {len(spelling_errors)} spelling errors")
+
                 return {
-                    'errors': errors[:max_errors],
-                    'total_errors': len(errors),
+                    'errors': all_errors[:max_errors],
+                    'total_errors': len(all_errors),
                     'by_category': by_category,
                     'language': self.language,
                     'success': True
@@ -150,6 +251,7 @@ class GrammarAnalyzer:
                 'verb': 'Verbi',
                 'punctuation': 'Punteggiatura',
                 'double': 'Doppie consonanti',
+                'spelling': 'Ortografia',
                 'custom': 'Altro'
             }
             for cat, count in result['by_category'].items():
@@ -174,6 +276,7 @@ class GrammarAnalyzer:
                     'verb': '⚡',
                     'punctuation': '📍',
                     'double': '✖️✖️',
+                    'spelling': '🔤',
                     'custom': '❓'
                 }
                 icon = category_icons.get(error.get('category', 'custom'), '📝')

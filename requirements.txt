@@ -3,6 +3,9 @@
 # Framework GUI
 PySide6>=6.6.0
 
+# Configuration Management
+PyYAML>=6.0  # Feature flags configuration
+
 # Analisi linguistica
 language-tool-python>=2.8.0
 spacy>=3.7.0
@@ -17,6 +20,11 @@ markdown>=3.5.0
 anthropic>=0.39.0  # Claude AI
 openai>=1.0.0      # OpenAI GPT
 ollama>=0.1.0      # Ollama (locale)
+
+# RAG (Retrieval Augmented Generation) - Knowledge Base locale
+chromadb==0.4.22                  # Vector database
+sentence-transformers>=2.7.0      # Text embeddings (multilingue)
+numpy<2.0                         # Required by chromadb 0.4.22
 
 # Note:
 # Dopo l'installazione, esegui:

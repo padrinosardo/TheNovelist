@@ -315,7 +315,10 @@ class AIChatWidget(QWidget):
         input_layout.setContentsMargins(8, 8, 8, 8)
         input_layout.setSpacing(8)
 
-        # Text input
+        # Text input with RAG toggle below
+        text_and_controls = QVBoxLayout()
+        text_and_controls.setSpacing(4)
+
         self.question_input = QTextEdit()
         self.question_input.setPlaceholderText("Type your question or #command here...")
         self.question_input.setMaximumHeight(80)
@@ -331,7 +334,30 @@ class AIChatWidget(QWidget):
         """)
         # Enable Ctrl/Cmd + Enter to send
         self.question_input.installEventFilter(self)
-        input_layout.addWidget(self.question_input, stretch=1)
+        text_and_controls.addWidget(self.question_input)
+
+        # RAG toggle checkbox
+        from PySide6.QtWidgets import QCheckBox
+        self.use_rag_checkbox = QCheckBox("🔍 Use Project Context (RAG)")
+        self.use_rag_checkbox.setChecked(True)  # Enabled by default
+        self.use_rag_checkbox.setToolTip(
+            "When enabled, the AI will use relevant information from your project's knowledge base\n"
+            "(characters, locations, themes, writing guide, etc.) to provide more contextual responses."
+        )
+        self.use_rag_checkbox.setStyleSheet(f"""
+            QCheckBox {{
+                font-size: 11px;
+                color: {text_color};
+                spacing: 4px;
+            }}
+            QCheckBox::indicator {{
+                width: 14px;
+                height: 14px;
+            }}
+        """)
+        text_and_controls.addWidget(self.use_rag_checkbox)
+
+        input_layout.addLayout(text_and_controls, stretch=1)
 
         # Send button (use Highlight color from palette)
         ask_btn = QPushButton("Send")
@@ -526,6 +552,34 @@ class AIChatWidget(QWidget):
                 f"Errore imprevisto:\n\n{str(e)}"
             )
 
+    def _generate_with_provider(self, provider, messages, system_prompt):
+        """
+        Helper method to generate AI response with or without RAG based on checkbox state
+
+        Args:
+            provider: AI provider instance
+            messages: List of AIMessage objects
+            system_prompt: System prompt string
+
+        Returns:
+            AIResponse object
+        """
+        use_rag = self.use_rag_checkbox.isChecked()
+
+        if use_rag:
+            # Use RAG-enhanced generation
+            return provider.generate_with_rag(
+                messages=messages,
+                project_manager=self.project_manager,
+                system_prompt=system_prompt
+            )
+        else:
+            # Use standard generation
+            return provider.generate(
+                messages=messages,
+                system_prompt=system_prompt
+            )
+
     def _call_ai_for_context_type(self, messages):
         """
         Call AI service with appropriate context builder based on entity type
@@ -565,8 +619,11 @@ Your role is to help writers develop rich, complex, and believable characters.
 
 {context}"""
 
-            # Get provider and generate
-            provider = self.ai_manager.get_provider()
+            # Get provider from project configuration (with fallback to global)
+            provider = self.ai_manager.get_provider_from_project(project)
+            if not provider:
+                # Fallback to global config if project config not available
+                provider = self.ai_manager.get_provider()
             if not provider:
                 from managers.ai.ai_provider import AIResponse
                 return AIResponse(
@@ -575,10 +632,7 @@ Your role is to help writers develop rich, complex, and believable characters.
                     error="No AI provider available. Please configure an API key in settings."
                 )
 
-            return provider.generate(
-                messages=messages,
-                system_prompt=system_prompt
-            )
+            return self._generate_with_provider(provider, messages, system_prompt)
 
         elif self.context_type == "Location":
             # Use LocationContextBuilder
@@ -596,7 +650,10 @@ Your role is to help writers develop rich, immersive locations and settings.
 
 {context}"""
 
-            provider = self.ai_manager.get_provider()
+            # Get provider from project configuration (with fallback to global)
+            provider = self.ai_manager.get_provider_from_project(project)
+            if not provider:
+                provider = self.ai_manager.get_provider()
             if not provider:
                 from managers.ai.ai_provider import AIResponse
                 return AIResponse(
@@ -605,7 +662,7 @@ Your role is to help writers develop rich, immersive locations and settings.
                     error="No AI provider available."
                 )
 
-            return provider.generate(messages=messages, system_prompt=system_prompt)
+            return self._generate_with_provider(provider, messages, system_prompt)
 
         elif self.context_type == "Note":
             # Use NoteContextBuilder
@@ -621,7 +678,10 @@ Your role is to help writers develop rich, immersive locations and settings.
 
 {context}"""
 
-            provider = self.ai_manager.get_provider()
+            # Get provider from project configuration (with fallback to global)
+            provider = self.ai_manager.get_provider_from_project(project)
+            if not provider:
+                provider = self.ai_manager.get_provider()
             if not provider:
                 from managers.ai.ai_provider import AIResponse
                 return AIResponse(
@@ -630,7 +690,7 @@ Your role is to help writers develop rich, immersive locations and settings.
                     error="No AI provider available."
                 )
 
-            return provider.generate(messages=messages, system_prompt=system_prompt)
+            return self._generate_with_provider(provider, messages, system_prompt)
 
         elif self.context_type == "Scene":
             # Use SceneContextBuilder
@@ -646,7 +706,10 @@ Your role is to help writers develop rich, immersive locations and settings.
 
 {context}"""
 
-            provider = self.ai_manager.get_provider()
+            # Get provider from project configuration (with fallback to global)
+            provider = self.ai_manager.get_provider_from_project(project)
+            if not provider:
+                provider = self.ai_manager.get_provider()
             if not provider:
                 from managers.ai.ai_provider import AIResponse
                 return AIResponse(
@@ -655,7 +718,7 @@ Your role is to help writers develop rich, immersive locations and settings.
                     error="No AI provider available."
                 )
 
-            return provider.generate(messages=messages, system_prompt=system_prompt)
+            return self._generate_with_provider(provider, messages, system_prompt)
 
         else:
             # Fallback
@@ -663,7 +726,15 @@ Your role is to help writers develop rich, immersive locations and settings.
 
     def _generate_with_simple_context(self, messages, task_description: str):
         """Fallback method for simple AI generation without full context"""
-        provider = self.ai_manager.get_provider()
+        # Get provider from project configuration (with fallback to global)
+        project = self.project_manager.current_project if self.project_manager else None
+        if project:
+            provider = self.ai_manager.get_provider_from_project(project)
+            if not provider:
+                provider = self.ai_manager.get_provider()
+        else:
+            provider = self.ai_manager.get_provider()
+
         if not provider:
             from managers.ai.ai_provider import AIResponse
             return AIResponse(
@@ -676,7 +747,7 @@ Your role is to help writers develop rich, immersive locations and settings.
 
 Provide helpful, detailed, and creative suggestions."""
 
-        return provider.generate(messages=messages, system_prompt=system_prompt)
+        return self._generate_with_provider(provider, messages, system_prompt)
 
     def _scroll_to_bottom(self):
         """Scroll conversation history to bottom"""
@@ -881,8 +952,15 @@ Provide helpful, detailed, and creative suggestions."""
             # Create message with custom prompt
             messages = [AIMessage(role="user", content=prompt)]
 
-            # Get AI provider
-            provider = self.ai_manager.get_provider()
+            # Get AI provider from project configuration (with fallback to global)
+            project = self.project_manager.current_project if self.project_manager else None
+            if project:
+                provider = self.ai_manager.get_provider_from_project(project)
+                if not provider:
+                    provider = self.ai_manager.get_provider()
+            else:
+                provider = self.ai_manager.get_provider()
+
             if not provider:
                 loading_bubble.deleteLater()
                 error_bubble = AIMessageBubble(
@@ -893,8 +971,8 @@ Provide helpful, detailed, and creative suggestions."""
                 self._scroll_to_bottom()
                 return
 
-            # Call AI (use simple context, command already has full context in prompt)
-            response = provider.generate(messages=messages)
+            # Call AI (with RAG if enabled - command already has full context in prompt)
+            response = self._generate_with_provider(provider, messages, system_prompt=None)
 
             # Remove loading bubble
             loading_bubble.deleteLater()

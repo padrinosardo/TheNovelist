@@ -281,6 +281,7 @@ class TheNovelistMainWindow(QMainWindow):
 
         # Character operations
         self.project_tree.add_character_requested.connect(self._add_character)
+        self.project_tree.rename_character_requested.connect(self._rename_character)
         self.project_tree.delete_character_requested.connect(self._delete_character)
 
         # Dynamic container operations
@@ -557,6 +558,10 @@ class TheNovelistMainWindow(QMainWindow):
         project, manuscript_text, characters = self.project_manager.open_project(filepath)
 
         if project:
+            # Clear previous analysis results when opening new project
+            self.manuscript_view.clear_analysis()
+            self.manuscript_view.clear_highlights()
+
             # Load manuscript
             self.manuscript_view.set_text(manuscript_text)
 
@@ -907,6 +912,10 @@ class TheNovelistMainWindow(QMainWindow):
         project, manuscript_text, characters = self.project_manager.open_project(filepath)
 
         if project:
+            # Clear previous analysis results when opening recent project
+            self.manuscript_view.clear_analysis()
+            self.manuscript_view.clear_highlights()
+
             # Load manuscript
             self.manuscript_view.set_text(manuscript_text)
 
@@ -1275,12 +1284,66 @@ class TheNovelistMainWindow(QMainWindow):
             self._update_ui_state()
             self.statusBar().showMessage("Character deleted", 3000)
 
+    def _rename_character(self, character_id: str):
+        """Rename a character from context menu"""
+        # Get current character
+        character = self.project_manager.character_manager.get_character(character_id)
+        if not character:
+            return
+
+        from PySide6.QtWidgets import QInputDialog
+        from utils.validators import Validators
+
+        # Show input dialog with current name
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Rename Character",
+            "New character name:",
+            text=character.name
+        )
+
+        if not ok:
+            return
+
+        new_name = new_name.strip()
+
+        # Validate new name
+        is_valid, error_msg = Validators.validate_character_name(new_name)
+        if not is_valid:
+            QMessageBox.warning(
+                self,
+                "Invalid Name",
+                error_msg
+            )
+            return
+
+        # Update character
+        self.project_manager.character_manager.update_character(
+            character_id,
+            name=new_name
+        )
+
+        # Update UI
+        characters = self.project_manager.character_manager.get_all_characters()
+        images_dir = self.project_manager.get_temp_images_directory()
+
+        self.project_tree.update_characters(characters)
+        self.characters_list_view.load_characters(characters, images_dir)
+
+        self.is_modified = True
+        self._update_ui_state()
+        self.statusBar().showMessage(f"Character renamed to '{new_name}'", 3000)
+
     def _on_character_updated(self):
         """Handle character update"""
+        characters = self.project_manager.character_manager.get_all_characters()
+        images_dir = self.project_manager.get_temp_images_directory()
+
         # Update tree
-        self.project_tree.update_characters(
-            self.project_manager.character_manager.get_all_characters()
-        )
+        self.project_tree.update_characters(characters)
+
+        # Update characters list view (fixes name update not showing)
+        self.characters_list_view.load_characters(characters, images_dir)
 
         self.is_modified = True
         self._update_window_title()
@@ -1312,6 +1375,10 @@ class TheNovelistMainWindow(QMainWindow):
         # Check if there's previous/next scene
         previous_scene = manager.get_previous_scene(scene_id)
         next_scene = manager.get_next_scene(scene_id)
+
+        # Clear previous analysis results when loading new scene
+        self.manuscript_view.clear_analysis()
+        self.manuscript_view.clear_highlights()
 
         # Switch to manuscript view
         self.workspace.show_manuscript()
@@ -1927,8 +1994,13 @@ class TheNovelistMainWindow(QMainWindow):
             formatted_text = self.grammar_analyzer.format_results(result)
             self.manuscript_view.update_grammar_results(formatted_text)
 
+            # Update highlights based on results
             if result.get('success') and result.get('errors'):
+                # Highlight errors found in analysis
                 self.manuscript_view.highlight_errors(result['errors'])
+            else:
+                # No errors found, clear old highlights
+                self.manuscript_view.clear_highlights()
 
         elif analysis_type == AnalysisThread.TYPE_REPETITIONS:
             formatted_text = self.repetitions_analyzer.format_results(result)

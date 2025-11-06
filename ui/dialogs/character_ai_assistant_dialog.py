@@ -11,6 +11,7 @@ from typing import Optional, List
 from models.character import Character
 from managers.ai import AIManager, AIMessage, AIResponse
 from utils.logger import AppLogger
+from shared.license import premium_feature
 
 
 class AIWorkerThread(QThread):
@@ -52,6 +53,7 @@ class AIWorkerThread(QThread):
             self.error.emit(str(e))
 
 
+@premium_feature("ai_character_assistant")
 class CharacterAIAssistantDialog(QDialog):
     """
     Dialog for AI-assisted character development

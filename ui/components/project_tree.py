@@ -19,7 +19,13 @@ class ProjectTree(QTreeWidget):
     """
 
     # Signals
-    project_info_selected = Signal()  # NEW: Project info clicked
+    project_info_selected = Signal()  # DEPRECATED: Legacy signal
+
+    # New Info Progetto sub-sections
+    general_info_selected = Signal()
+    ai_provider_config_selected = Signal()
+    ai_writing_guide_selected = Signal()
+
     manuscript_selected = Signal()
     chapter_selected = Signal(str)  # chapter_id
     scene_selected = Signal(str)  # scene_id
@@ -46,6 +52,7 @@ class ProjectTree(QTreeWidget):
 
     # Character operations
     add_character_requested = Signal()
+    rename_character_requested = Signal(str)  # character_id
     delete_character_requested = Signal(str)  # character_id
 
     # Reordering operations
@@ -129,10 +136,26 @@ class ProjectTree(QTreeWidget):
         root.setExpanded(True)
         root.setData(0, Qt.ItemDataRole.UserRole, "root")
 
-        # Project Info node - Simple clickable item without children
+        # Project Info node - Now expandable with sub-items
         info_item = QTreeWidgetItem(root)
         info_item.setText(0, f"📋 {ui_labels['project_info']}")
-        info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info")
+        info_item.setExpanded(True)
+        info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info_parent")
+
+        # Sub-item 1: General Info
+        general_info_item = QTreeWidgetItem(info_item)
+        general_info_item.setText(0, f"  📝 {ui_labels['general_info']}")
+        general_info_item.setData(0, Qt.ItemDataRole.UserRole, "project_info_general")
+
+        # Sub-item 2: AI Provider Configuration
+        ai_provider_item = QTreeWidgetItem(info_item)
+        ai_provider_item.setText(0, f"  🤖 {ui_labels['ai_provider']}")
+        ai_provider_item.setData(0, Qt.ItemDataRole.UserRole, "project_info_ai_provider")
+
+        # Sub-item 3: AI Writing Guide
+        ai_guide_item = QTreeWidgetItem(info_item)
+        ai_guide_item.setText(0, f"  ✍️  {ui_labels['ai_writing_guide']}")
+        ai_guide_item.setData(0, Qt.ItemDataRole.UserRole, "project_info_ai_guide")
 
         # Manuscript node with hierarchy
         manuscript_item = QTreeWidgetItem(root)
@@ -201,30 +224,45 @@ class ProjectTree(QTreeWidget):
         labels = {
             'it': {
                 'project_info': 'Info Progetto',
+                'general_info': 'Info Generali',
+                'ai_provider': 'Configurazione AI',
+                'ai_writing_guide': 'Guida Scrittura AI',
                 'manuscript': 'Manoscritto',
                 'characters': 'Personaggi',
                 'statistics': 'Statistiche'
             },
             'en': {
                 'project_info': 'Project Info',
+                'general_info': 'General Info',
+                'ai_provider': 'AI Configuration',
+                'ai_writing_guide': 'AI Writing Guide',
                 'manuscript': 'Manuscript',
                 'characters': 'Characters',
                 'statistics': 'Statistics'
             },
             'es': {
                 'project_info': 'Info del Proyecto',
+                'general_info': 'Info General',
+                'ai_provider': 'Configuración IA',
+                'ai_writing_guide': 'Guía de Escritura IA',
                 'manuscript': 'Manuscrito',
                 'characters': 'Personajes',
                 'statistics': 'Estadísticas'
             },
             'fr': {
                 'project_info': 'Info Projet',
+                'general_info': 'Info Générales',
+                'ai_provider': 'Configuration IA',
+                'ai_writing_guide': 'Guide d\'Écriture IA',
                 'manuscript': 'Manuscrit',
                 'characters': 'Personnages',
                 'statistics': 'Statistiques'
             },
             'de': {
                 'project_info': 'Projektinfo',
+                'general_info': 'Allgemeine Info',
+                'ai_provider': 'KI-Konfiguration',
+                'ai_writing_guide': 'KI-Schreibanleitung',
                 'manuscript': 'Manuskript',
                 'characters': 'Charaktere',
                 'statistics': 'Statistiken'
@@ -277,8 +315,17 @@ class ProjectTree(QTreeWidget):
         """
         item_type = item.data(0, Qt.ItemDataRole.UserRole)
 
-        if item_type == "project_info":
-            self.project_info_selected.emit()
+        # Handle new sub-sections of Info Progetto
+        if item_type == "project_info_general":
+            self.general_info_selected.emit()
+        elif item_type == "project_info_ai_provider":
+            self.ai_provider_config_selected.emit()
+        elif item_type == "project_info_ai_guide":
+            self.ai_writing_guide_selected.emit()
+        # Legacy fallback (if clicked on parent node)
+        elif item_type == "project_info" or item_type == "project_info_parent":
+            # Default to General Info when clicking parent
+            self.general_info_selected.emit()
         elif item_type == "manuscript":
             self.manuscript_selected.emit()
         elif isinstance(item_type, str) and item_type.startswith("chapter:"):
@@ -434,6 +481,14 @@ class ProjectTree(QTreeWidget):
         elif isinstance(item_type, str) and item_type.startswith("character:"):
             # Context menu for individual character
             character_id = item_type.split(":", 1)[1]
+
+            rename_action = QAction("Rename Character", self)
+            rename_action.triggered.connect(
+                lambda: self.rename_character_requested.emit(character_id)
+            )
+            menu.addAction(rename_action)
+
+            menu.addSeparator()
 
             delete_action = QAction("Delete Character", self)
             delete_action.triggered.connect(

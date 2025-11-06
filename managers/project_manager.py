@@ -24,6 +24,9 @@ from managers.source_manager import SourceManager
 from managers.note_manager import NoteManager
 from managers.worldbuilding_manager import WorldbuildingManager
 from managers.template_manager import TemplateManager
+from managers.rag.knowledge_base import KnowledgeBase
+from shared.license import feature_manager
+from shared.exceptions import FeatureLockedError
 from utils.logger import AppLogger
 from utils.error_handler import ErrorHandler
 from utils.backup_manager import BackupManager
@@ -57,6 +60,45 @@ class ProjectManager:
         self.worldbuilding_manager: Optional[WorldbuildingManager] = None
         self.source_manager: Optional[SourceManager] = None
         self.note_manager: Optional[NoteManager] = None
+
+        # RAG Knowledge Base (Milestone 7) - Lazy loaded for premium users
+        self._knowledge_base: Optional[KnowledgeBase] = None
+        self._knowledge_base_initialized = False
+
+    @property
+    def knowledge_base(self) -> Optional[KnowledgeBase]:
+        """
+        Lazy-loaded RAG Knowledge Base (Premium Feature)
+
+        Returns None if:
+        - Feature not available (free tier)
+        - Initialization failed
+
+        Usage:
+            if project_manager.knowledge_base:
+                project_manager.knowledge_base.index_project(project)
+        """
+        if self._knowledge_base_initialized:
+            return self._knowledge_base
+
+        # Try to initialize once
+        self._knowledge_base_initialized = True
+
+        # Check if RAG feature is available
+        if not feature_manager.is_available("rag_system"):
+            AppLogger.info("RAG System not available (requires premium tier)")
+            return None
+
+        try:
+            self._knowledge_base = KnowledgeBase()
+            AppLogger.info("RAG Knowledge Base initialized successfully")
+            return self._knowledge_base
+        except FeatureLockedError as e:
+            AppLogger.warning(f"RAG System locked: {e.upgrade_info['name']}")
+            return None
+        except Exception as e:
+            AppLogger.error(f"Failed to initialize RAG Knowledge Base: {e}")
+            return None
 
     def create_new_project(self, title: str, author: str, filepath: str, language: str = 'it',
                           project_type: ProjectType = ProjectType.NOVEL, genre: str = "",
@@ -454,6 +496,18 @@ class ProjectManager:
 
             # Set NLP language for opened project
             self._set_nlp_language(project.language)
+
+            # Index project in RAG knowledge base (Milestone 7 - Premium Feature)
+            if self.knowledge_base:
+                try:
+                    AppLogger.info("Indexing project in RAG knowledge base...")
+                    self.knowledge_base.index_project(project)
+                    AppLogger.info("RAG indexing completed successfully")
+                except Exception as e:
+                    AppLogger.warning(f"RAG indexing failed (non-fatal): {e}")
+                    # Non-fatal error, project can still be used without RAG
+            else:
+                AppLogger.info("RAG system not available (requires premium tier)")
 
             AppLogger.info(f"Project opened successfully: {project.title} (type: {project.project_type.value}, language: {project.language})")
             characters = self.character_manager.get_all_characters()
@@ -870,3 +924,29 @@ class ProjectManager:
         if self._temp_dir:
             return os.path.join(self._temp_dir, 'images')
         return None
+
+    def get_project_context(self, query: str, top_k: int = 5) -> str:
+        """
+        Get relevant project context from RAG knowledge base (Milestone 7)
+
+        Args:
+            query: The query to search for
+            top_k: Number of results to return (default: 5)
+
+        Returns:
+            str: Formatted context string to add to AI prompts
+        """
+        try:
+            if not self.current_project:
+                return ""
+
+            # Check if RAG system is available (premium feature)
+            if not self.knowledge_base:
+                AppLogger.info("RAG system not available for context retrieval")
+                return ""
+
+            context = self.knowledge_base.get_context(query, top_k)
+            return context
+        except Exception as e:
+            AppLogger.warning(f"Error getting project context from RAG: {e}")
+            return ""

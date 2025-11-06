@@ -123,19 +123,33 @@ class AIProviderConfigView(QWidget):
         }
 
     def load_project(self, project: Project):
-        """Load project AI configuration"""
+        """Load project AI configuration with global config fallback"""
         self._current_project = project
 
         # Block signals during load
         self.ai_config_widget.blockSignals(True)
 
-        # Load AI config from project (use ai_enabled, ai_provider_name and ai_provider_config)
+        # Get AI enabled state
         ai_enabled = getattr(project, 'ai_enabled', True)  # Default to True for backward compatibility
-        if project.ai_provider_name and project.ai_provider_config:
-            self.ai_config_widget.set_config(project.ai_provider_name, project.ai_provider_config, ai_enabled)
-        else:
-            # Use defaults if no config
-            self.ai_config_widget.clear()
+
+        # Get project config
+        project_provider_name = project.ai_provider_name or 'claude'
+        project_provider_config = project.ai_provider_config or {}
+
+        # Get global config for fallback (if ai_manager is available)
+        global_config = {}
+        if self.ai_manager and project_provider_name:
+            global_config = self.ai_manager.config.get('providers', {}).get(
+                project_provider_name, {}
+            )
+
+        # Load config with fallback
+        self.ai_config_widget.set_config_with_fallback(
+            project_provider_name,
+            project_provider_config,
+            global_config,
+            ai_enabled
+        )
 
         # Re-enable signals
         self.ai_config_widget.blockSignals(False)

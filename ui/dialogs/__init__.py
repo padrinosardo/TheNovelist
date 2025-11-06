@@ -8,6 +8,7 @@ from .note_detail_dialog import NoteDetailDialog
 from .export_dialog import ExportDialog
 from .character_ai_assistant_dialog import CharacterAIAssistantDialog
 from .ai_settings_dialog import AISettingsDialog
+from .upgrade_dialog import UpgradeDialog
 
 __all__ = [
     'NewProjectDialog',
@@ -17,4 +18,5 @@ __all__ = [
     'ExportDialog',
     'CharacterAIAssistantDialog',
     'AISettingsDialog',
+    'UpgradeDialog',
 ]

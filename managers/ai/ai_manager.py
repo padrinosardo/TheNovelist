@@ -168,10 +168,18 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
 
     def get_provider_from_project(self, project) -> Optional[AIProvider]:
         """
-        Get an AI provider instance from PROJECT configuration (per-project AI)
+        Get an AI provider instance from PROJECT configuration with FALLBACK to global config
 
-        This method uses the AI configuration stored in the project, allowing
-        different projects to use different AI providers and configurations.
+        Strategy (MERGE CONFIG):
+        1. Get project config (provider name + config)
+        2. Get global config for same provider
+        3. Merge: global config as base, project config overrides
+        4. Special case: if project has empty API key, use global API key
+
+        This allows:
+        - Projects without API key to use global API key (most common)
+        - Projects to override model/temperature while using global API key
+        - Projects to use completely custom API key if needed
 
         Args:
             project: Project model instance with ai_provider_name and ai_provider_config
@@ -179,30 +187,53 @@ Always maintain a collaborative tone, asking for the writer's input and preferen
         Returns:
             AIProvider: Provider instance or None if not available
         """
-        provider_name = getattr(project, 'ai_provider_name', 'claude')
-        provider_config = getattr(project, 'ai_provider_config', {})
+        # Get provider name from project, or use global active provider
+        provider_name = getattr(project, 'ai_provider_name', None)
+        if not provider_name:
+            provider_name = self.config.get('active_provider', 'claude')
 
+        # Get project config
+        project_config = getattr(project, 'ai_provider_config', {})
+
+        # Get global config for this provider
+        global_config = self.config.get('providers', {}).get(provider_name, {})
+
+        # Merge configs: global as base, project overrides
+        merged_config = global_config.copy()
+        if project_config:
+            merged_config.update(project_config)
+
+        # Special case: if project has empty/no API key, use global API key
+        if not merged_config.get('api_key'):
+            merged_config['api_key'] = global_config.get('api_key', '')
+
+        # Validate merged config
         if provider_name not in self.PROVIDERS:
             AppLogger.error(f"Unknown provider: {provider_name}")
             return None
 
-        if not provider_config:
-            AppLogger.warning(f"No configuration for provider: {provider_name} in project")
+        if not merged_config:
+            AppLogger.warning(f"No configuration available for provider: {provider_name}")
             return None
 
         try:
             provider_class = self.PROVIDERS[provider_name]
-            provider = provider_class(provider_config)
+            provider = provider_class(merged_config)
 
             if not provider.is_available():
-                AppLogger.warning(f"Provider {provider_name} is not available (from project config)")
+                AppLogger.warning(f"Provider {provider_name} is not available")
                 return None
 
-            AppLogger.info(f"Provider {provider_name} instantiated from project configuration")
+            # Log which config was used
+            if project_config.get('api_key'):
+                AppLogger.info(f"Provider {provider_name} loaded from project configuration")
+            else:
+                AppLogger.info(f"Provider {provider_name} loaded from project (using global API key)")
+
             return provider
 
         except Exception as e:
-            AppLogger.error(f"Error creating provider {provider_name} from project: {e}")
+            AppLogger.error(f"Error creating provider {provider_name}: {e}")
             return None
 
     def set_active_provider(self, provider_name: str) -> bool:
