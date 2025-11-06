@@ -2,7 +2,7 @@
 Manuscript Structure Manager - Manages the hierarchical structure of the manuscript
 """
 from typing import Optional, List, Tuple
-from models.manuscript_structure import ManuscriptStructure, Chapter, Scene
+from models.manuscript_structure import ManuscriptStructure, Part, Chapter, Scene
 from utils.logger import AppLogger
 
 
@@ -30,36 +30,223 @@ class ManuscriptStructureManager:
         """Set a new manuscript structure"""
         self.structure = structure
 
+    # ==================== Part Operations ====================
+
+    def add_part(self, title: str, order: int = None) -> Part:
+        """
+        Add a new part to the manuscript
+
+        Args:
+            title: Part title
+            order: Part order (None = append at end)
+
+        Returns:
+            Part: The created part
+        """
+        if not self.structure.use_parts_structure:
+            raise ValueError("Parts not supported in legacy mode. Set use_parts_structure=True")
+
+        if order is None:
+            order = len(self.structure.parts)
+
+        part = Part.create_new(title, order)
+
+        # Create default first chapter with first scene
+        chapter = Chapter.create_new("Chapter 1", order=0)
+        scene = Scene.create_new("Scene 1", order=0)
+        chapter.add_scene(scene)
+        part.add_chapter(chapter)
+
+        self.structure.add_part(part)
+
+        # Reorder if needed
+        if order < len(self.structure.parts) - 1:
+            self._reorder_parts()
+
+        AppLogger.debug(f"Added part: {title} (ID: {part.id})")
+        return part
+
+    def rename_part(self, part_id: str, new_title: str) -> bool:
+        """
+        Rename a part
+
+        Args:
+            part_id: Part ID
+            new_title: New title
+
+        Returns:
+            bool: True if successful
+        """
+        part = self.structure.get_part(part_id)
+        if part:
+            old_title = part.title
+            part.title = new_title
+            AppLogger.debug(f"Renamed part: {old_title} -> {new_title}")
+            return True
+
+        AppLogger.warning(f"Part not found for rename: {part_id}")
+        return False
+
+    def delete_part(self, part_id: str) -> bool:
+        """
+        Delete a part and all its chapters and scenes
+
+        Args:
+            part_id: Part ID
+
+        Returns:
+            bool: True if successful
+        """
+        part = self.structure.get_part(part_id)
+        if not part:
+            AppLogger.warning(f"Part not found for delete: {part_id}")
+            return False
+
+        # Don't allow deleting the last part
+        if len(self.structure.parts) <= 1:
+            AppLogger.warning("Cannot delete the last part in the manuscript")
+            return False
+
+        # Clear current scene if it's in this part
+        if self.structure.current_scene_id:
+            for chapter in part.chapters:
+                for scene in chapter.scenes:
+                    if scene.id == self.structure.current_scene_id:
+                        self.structure.current_scene_id = None
+                        break
+
+        success = self.structure.remove_part(part_id)
+        if success:
+            self._reorder_parts()
+            total_scenes = sum(len(c.scenes) for c in part.chapters)
+            AppLogger.info(f"Deleted part: {part.title} ({len(part.chapters)} chapters, {total_scenes} scenes)")
+
+        return success
+
+    def reorder_parts(self, part_ids_order: List[str]) -> bool:
+        """
+        Reorder parts based on list of IDs
+
+        Args:
+            part_ids_order: List of part IDs in desired order
+
+        Returns:
+            bool: True if successful
+        """
+        if len(part_ids_order) != len(self.structure.parts):
+            AppLogger.error("Part reorder failed: ID count mismatch")
+            return False
+
+        # Create new ordered list
+        new_parts = []
+        for part_id in part_ids_order:
+            part = self.structure.get_part(part_id)
+            if not part:
+                AppLogger.error(f"Part reorder failed: Invalid ID {part_id}")
+                return False
+            new_parts.append(part)
+
+        # Update structure
+        self.structure.parts = new_parts
+        self._reorder_parts()
+
+        AppLogger.debug("Parts reordered successfully")
+        return True
+
+    def _reorder_parts(self):
+        """Internal: Fix part order numbers"""
+        for i, part in enumerate(self.structure.parts):
+            part.order = i
+
+    def get_all_parts(self) -> List[Part]:
+        """Get all parts in order"""
+        return sorted(self.structure.parts, key=lambda p: p.order)
+
+    def get_part(self, part_id: str) -> Optional[Part]:
+        """Get a part by ID"""
+        return self.structure.get_part(part_id)
+
+    def get_chapters_in_part(self, part_id: str) -> List[Chapter]:
+        """
+        Get all chapters in a part
+
+        Args:
+            part_id: Part ID
+
+        Returns:
+            List[Chapter]: Chapters in order
+        """
+        part = self.structure.get_part(part_id)
+        if part:
+            return sorted(part.chapters, key=lambda c: c.order)
+        return []
+
+    def get_part_word_count(self, part_id: str) -> int:
+        """
+        Get word count for a part
+
+        Args:
+            part_id: Part ID
+
+        Returns:
+            int: Word count
+        """
+        part = self.structure.get_part(part_id)
+        return part.get_total_word_count() if part else 0
+
     # ==================== Chapter Operations ====================
 
-    def add_chapter(self, title: str, order: int = None) -> Chapter:
+    def add_chapter(self, title: str, part_id: str = None, order: int = None) -> Chapter:
         """
-        Add a new chapter to the manuscript
+        Add a new chapter to a part (or directly to structure if legacy mode)
 
         Args:
             title: Chapter title
+            part_id: Part ID (required if use_parts_structure is True)
             order: Chapter order (None = append at end)
 
         Returns:
             Chapter: The created chapter
         """
-        if order is None:
-            order = len(self.structure.chapters)
+        if self.structure.use_parts_structure:
+            # Modern mode: add to part
+            if not part_id:
+                raise ValueError("part_id required when using parts structure")
 
-        chapter = Chapter.create_new(title, order)
+            part = self.structure.get_part(part_id)
+            if not part:
+                raise ValueError(f"Part not found: {part_id}")
 
-        # Create default first scene
-        scene = Scene.create_new("Scene 1", order=0)
-        chapter.add_scene(scene)
+            if order is None:
+                order = len(part.chapters)
 
-        self.structure.add_chapter(chapter)
+            chapter = Chapter.create_new(title, order)
+            scene = Scene.create_new("Scene 1", order=0)
+            chapter.add_scene(scene)
 
-        # Reorder if needed
-        if order < len(self.structure.chapters) - 1:
-            self._reorder_chapters()
+            part.add_chapter(chapter)
 
-        AppLogger.debug(f"Added chapter: {title} (ID: {chapter.id})")
-        return chapter
+            if order < len(part.chapters) - 1:
+                self._reorder_chapters_in_part(part_id)
+
+            AppLogger.debug(f"Added chapter: {title} to part {part.title}")
+            return chapter
+        else:
+            # Legacy mode: add directly to structure
+            if order is None:
+                order = len(self.structure.chapters)
+
+            chapter = Chapter.create_new(title, order)
+            scene = Scene.create_new("Scene 1", order=0)
+            chapter.add_scene(scene)
+
+            self.structure.add_chapter(chapter)
+
+            if order < len(self.structure.chapters) - 1:
+                self._reorder_chapters()
+
+            AppLogger.debug(f"Added chapter: {title} (ID: {chapter.id})")
+            return chapter
 
     def rename_chapter(self, chapter_id: str, new_title: str) -> bool:
         """
@@ -146,9 +333,16 @@ class ManuscriptStructureManager:
         for i, chapter in enumerate(self.structure.chapters):
             chapter.order = i
 
+    def _reorder_chapters_in_part(self, part_id: str):
+        """Internal: Fix chapter order numbers in a part"""
+        part = self.structure.get_part(part_id)
+        if part:
+            for i, chapter in enumerate(part.chapters):
+                chapter.order = i
+
     def get_all_chapters(self) -> List[Chapter]:
-        """Get all chapters in order"""
-        return sorted(self.structure.chapters, key=lambda c: c.order)
+        """Get all chapters in order (from all parts or direct)"""
+        return self.structure.get_all_chapters()
 
     def get_chapter(self, chapter_id: str) -> Optional[Chapter]:
         """Get a chapter by ID"""

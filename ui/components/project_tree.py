@@ -6,7 +6,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QAction
 from typing import List, Optional
 from models.character import Character
-from models.manuscript_structure import ManuscriptStructure
+from models.manuscript_structure import ManuscriptStructure, Part, Chapter, Scene
 from models.project import Project
 from models.container_type import ContainerType
 from datetime import datetime
@@ -27,6 +27,7 @@ class ProjectTree(QTreeWidget):
     ai_writing_guide_selected = Signal()
 
     manuscript_selected = Signal()
+    part_selected = Signal(str)  # part_id
     chapter_selected = Signal(str)  # chapter_id
     scene_selected = Signal(str)  # scene_id
     characters_list_selected = Signal()
@@ -49,6 +50,11 @@ class ProjectTree(QTreeWidget):
     rename_scene_requested = Signal(str)  # scene_id
     delete_chapter_requested = Signal(str)  # chapter_id
     delete_scene_requested = Signal(str)  # scene_id
+
+    # Part operations
+    add_part_requested = Signal()
+    rename_part_requested = Signal(str)  # part_id
+    delete_part_requested = Signal(str)  # part_id
 
     # Character operations
     add_character_requested = Signal()
@@ -328,6 +334,9 @@ class ProjectTree(QTreeWidget):
             self.general_info_selected.emit()
         elif item_type == "manuscript":
             self.manuscript_selected.emit()
+        elif isinstance(item_type, str) and item_type.startswith("part:"):
+            part_id = item_type.split(":", 1)[1]
+            self.part_selected.emit(part_id)
         elif isinstance(item_type, str) and item_type.startswith("chapter:"):
             chapter_id = item_type.split(":", 1)[1]
             self.chapter_selected.emit(chapter_id)
@@ -374,9 +383,42 @@ class ProjectTree(QTreeWidget):
 
         if item_type == "manuscript":
             # Context menu for Manuscript node
+            if self._manuscript_structure and self._manuscript_structure.use_parts_structure:
+                # 3-level structure: add Part
+                add_part_action = QAction("Add New Part", self)
+                add_part_action.triggered.connect(self.add_part_requested.emit)
+                menu.addAction(add_part_action)
+            else:
+                # 2-level structure: add Chapter (legacy)
+                add_chapter_action = QAction("Add New Chapter", self)
+                add_chapter_action.triggered.connect(self.add_chapter_requested.emit)
+                menu.addAction(add_chapter_action)
+
+        elif isinstance(item_type, str) and item_type.startswith("part:"):
+            # Context menu for Part
+            part_id = item_type.split(":", 1)[1]
+
             add_chapter_action = QAction("Add New Chapter", self)
-            add_chapter_action.triggered.connect(self.add_chapter_requested.emit)
+            add_chapter_action.triggered.connect(
+                lambda: self.add_chapter_requested.emit()
+            )
             menu.addAction(add_chapter_action)
+
+            menu.addSeparator()
+
+            rename_action = QAction("Rename Part", self)
+            rename_action.triggered.connect(
+                lambda: self.rename_part_requested.emit(part_id)
+            )
+            menu.addAction(rename_action)
+
+            menu.addSeparator()
+
+            delete_action = QAction("Delete Part", self)
+            delete_action.triggered.connect(
+                lambda: self.delete_part_requested.emit(part_id)
+            )
+            menu.addAction(delete_action)
 
         elif isinstance(item_type, str) and item_type.startswith("chapter:"):
             # Context menu for Chapter
@@ -675,18 +717,40 @@ class ProjectTree(QTreeWidget):
         # Clear existing chapters/scenes
         manuscript_node.takeChildren()
 
-        # Rebuild chapters and scenes
-        for chapter in sorted(manuscript_structure.chapters, key=lambda c: c.order):
-            chapter_item = QTreeWidgetItem(manuscript_node)
-            chapter_item.setText(0, f"  📖 {chapter.title}")
-            chapter_item.setExpanded(True)
-            chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+        # Rebuild structure based on mode
+        if manuscript_structure.use_parts_structure:
+            # 3-level: Parts → Chapters → Scenes
+            for part in sorted(manuscript_structure.parts, key=lambda p: p.order):
+                part_item = QTreeWidgetItem(manuscript_node)
+                part_item.setText(0, f"  📚 {part.title}")
+                part_item.setExpanded(True)
+                part_item.setData(0, Qt.ItemDataRole.UserRole, f"part:{part.id}")
 
-            # Add scenes under chapter
-            for scene in sorted(chapter.scenes, key=lambda s: s.order):
-                scene_item = QTreeWidgetItem(chapter_item)
-                scene_item.setText(0, f"    📝 {scene.title}")
-                scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
+                # Add chapters under part
+                for chapter in sorted(part.chapters, key=lambda c: c.order):
+                    chapter_item = QTreeWidgetItem(part_item)
+                    chapter_item.setText(0, f"    📖 {chapter.title}")
+                    chapter_item.setExpanded(True)
+                    chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+
+                    # Add scenes under chapter
+                    for scene in sorted(chapter.scenes, key=lambda s: s.order):
+                        scene_item = QTreeWidgetItem(chapter_item)
+                        scene_item.setText(0, f"      📝 {scene.title}")
+                        scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
+        else:
+            # 2-level: Chapters → Scenes (legacy)
+            for chapter in sorted(manuscript_structure.chapters, key=lambda c: c.order):
+                chapter_item = QTreeWidgetItem(manuscript_node)
+                chapter_item.setText(0, f"  📖 {chapter.title}")
+                chapter_item.setExpanded(True)
+                chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+
+                # Add scenes under chapter
+                for scene in sorted(chapter.scenes, key=lambda s: s.order):
+                    scene_item = QTreeWidgetItem(chapter_item)
+                    scene_item.setText(0, f"    📝 {scene.title}")
+                    scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
 
         manuscript_node.setExpanded(True)
 

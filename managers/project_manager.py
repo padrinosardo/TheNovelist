@@ -164,7 +164,15 @@ class ProjectManager:
                 template_data = template_manager.get_template(project_type, language)
 
                 # Create manuscript structure from template
-                manuscript_structure = ManuscriptStructure()
+                # NOVELs use 3-level structure even with templates
+                use_parts = (project_type == ProjectType.NOVEL)
+                manuscript_structure = ManuscriptStructure(use_parts_structure=use_parts)
+
+                # If using parts, create a default Part to contain template chapters
+                if use_parts:
+                    from models.manuscript_structure import Part
+                    default_part = Part.create_new("Part 1", order=0)
+                    manuscript_structure.add_part(default_part)
 
                 # Add chapters from template
                 for chapter_data in template_data.get('chapters', []):
@@ -192,7 +200,11 @@ class ProjectManager:
                             )
                             chapter.scenes.append(scene)
 
-                    manuscript_structure.chapters.append(chapter)
+                    # Add chapter to part (if using parts) or directly to structure (legacy)
+                    if use_parts:
+                        default_part.add_chapter(chapter)
+                    else:
+                        manuscript_structure.chapters.append(chapter)
 
                 # Handle projects without chapters (e.g., articles, poetry, short stories)
                 # Since ManuscriptStructure doesn't support standalone scenes,
@@ -259,8 +271,13 @@ class ProjectManager:
                               f"{len(template_data.get('scenes', []))} scenes, "
                               f"{len(template_data.get('characters', []))} characters")
             else:
-                # Create default manuscript structure (Chapter 1 > Scene 1)
-                default_structure = ManuscriptStructure.create_default()
+                # Create default manuscript structure
+                # NOVELs use 3-level structure (Part > Chapter > Scene)
+                # Other types use 2-level structure (Chapter > Scene)
+                use_parts = (project_type == ProjectType.NOVEL)
+                AppLogger.debug(f"Creating project: type={project_type}, type.value={project_type.value if hasattr(project_type, 'value') else 'N/A'}, use_parts={use_parts}")
+                default_structure = ManuscriptStructure.create_default(use_parts=use_parts)
+                AppLogger.debug(f"Created structure: use_parts_structure={default_structure.use_parts_structure}, parts count={len(default_structure.parts)}, chapters count={len(default_structure.chapters)}")
                 with open(manuscript_structure_path, 'w', encoding='utf-8') as f:
                     json.dump(default_structure.to_dict(), f, indent=2)
 
@@ -411,7 +428,9 @@ class ProjectManager:
                 try:
                     with open(manuscript_structure_path, 'r', encoding='utf-8') as f:
                         structure_data = json.load(f)
+                    AppLogger.debug(f"Loaded structure_data: use_parts={structure_data.get('use_parts_structure')}, parts_count={len(structure_data.get('parts', []))}, chapters_count={len(structure_data.get('chapters', []))}")
                     manuscript_structure = ManuscriptStructure.from_dict(structure_data)
+                    AppLogger.debug(f"Parsed structure: use_parts_structure={manuscript_structure.use_parts_structure}, parts={len(manuscript_structure.parts)}, chapters={len(manuscript_structure.chapters)}")
                     AppLogger.info("Manuscript structure loaded successfully")
                 except json.JSONDecodeError as e:
                     AppLogger.error(f"Invalid JSON in manuscript_structure.json: {e}")

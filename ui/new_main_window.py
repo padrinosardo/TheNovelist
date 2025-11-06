@@ -270,6 +270,9 @@ class TheNovelistMainWindow(QMainWindow):
         self.project_tree.notes_selected.connect(self._show_notes)
 
         # Manuscript structure operations
+        self.project_tree.add_part_requested.connect(self._add_part)
+        self.project_tree.rename_part_requested.connect(self._rename_part)
+        self.project_tree.delete_part_requested.connect(self._delete_part)
         self.project_tree.add_chapter_requested.connect(self._add_chapter)
         self.project_tree.add_scene_requested.connect(self._add_scene)
         self.project_tree.rename_chapter_requested.connect(self._rename_chapter)
@@ -521,6 +524,10 @@ class TheNovelistMainWindow(QMainWindow):
             self.manuscript_view.clear_text()
             self.manuscript_view.clear_analysis()
             self._update_ui_state()
+
+            # Update project tree with new manuscript structure
+            manuscript_structure = self.project_manager.manuscript_structure_manager.get_structure()
+            self.project_tree.update_manuscript_structure(manuscript_structure)
 
             # Add to recent projects
             self.settings.add_recent_project(filepath)
@@ -1593,6 +1600,112 @@ class TheNovelistMainWindow(QMainWindow):
         if next_scene:
             self.project_tree.select_scene(next_scene.id)
             self._on_scene_selected(next_scene.id)
+
+    def _add_part(self):
+        """Add a new part"""
+        if not self.project_manager.has_project():
+            return
+
+        from PySide6.QtWidgets import QInputDialog
+
+        title, ok = QInputDialog.getText(
+            self,
+            "Add New Part",
+            "Part title:",
+            text="Part 1"
+        )
+
+        if ok and title:
+            # Add part through manager
+            manager = self.project_manager.manuscript_structure_manager
+            new_part = manager.add_part(title)
+
+            # Update tree
+            self.project_tree.update_manuscript_structure(manager.get_structure())
+
+            self.is_modified = True
+            self.statusBar().showMessage(f"Added part: {title}", 3000)
+
+    def _rename_part(self, part_id: str):
+        """Rename a part"""
+        if not self.project_manager.has_project():
+            return
+
+        from PySide6.QtWidgets import QInputDialog
+
+        manager = self.project_manager.manuscript_structure_manager
+        part = manager.get_part(part_id)
+        if not part:
+            return
+
+        title, ok = QInputDialog.getText(
+            self,
+            "Rename Part",
+            "Part title:",
+            text=part.title
+        )
+
+        if ok and title:
+            # Rename through manager
+            manager.rename_part(part_id, title)
+
+            # Update tree
+            self.project_tree.update_manuscript_structure(manager.get_structure())
+
+            self.is_modified = True
+            self.statusBar().showMessage(f"Renamed part to: {title}", 3000)
+
+    def _delete_part(self, part_id: str):
+        """Delete a part"""
+        if not self.project_manager.has_project():
+            return
+
+        from PySide6.QtWidgets import QMessageBox
+
+        manager = self.project_manager.manuscript_structure_manager
+        part = manager.get_part(part_id)
+        if not part:
+            return
+
+        # Confirm deletion
+        chapter_count = len(part.chapters)
+        scene_count = sum(len(ch.scenes) for ch in part.chapters)
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"Delete part '{part.title}'?\n\n"
+            f"This will delete {chapter_count} chapter(s) and {scene_count} scene(s).",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Delete through manager
+        success = manager.delete_part(part_id)
+
+        if success:
+            # Update tree
+            self.project_tree.update_manuscript_structure(manager.get_structure())
+
+            # If we deleted the current scene's part, clear editor
+            current_scene_id = self.manuscript_view.get_current_scene_id()
+            if current_scene_id:
+                for chapter in part.chapters:
+                    if chapter.get_scene(current_scene_id):
+                        self.manuscript_view.clear_text()
+
+                        # Select first available scene
+                        all_scenes = manager.get_structure().get_all_scenes()
+                        if all_scenes:
+                            self.project_tree.select_scene(all_scenes[0].id)
+                            self._on_scene_selected(all_scenes[0].id)
+                        break
+
+            self.is_modified = True
+            self.statusBar().showMessage(f"Deleted part: {part.title}", 3000)
 
     def _add_chapter(self):
         """Add a new chapter"""
