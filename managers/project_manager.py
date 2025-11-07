@@ -509,6 +509,9 @@ class ProjectManager:
                 except Exception as e:
                     AppLogger.warning(f"Could not load container {container_type.value}: {e}")
 
+            # Update last opened date
+            project.update_last_opened_date()
+
             # Set current project
             self.current_project = project
             self.current_filepath = filepath

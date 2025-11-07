@@ -9,6 +9,7 @@ from .timeline_view import TimelineView
 from .sources_list_view import SourcesListView
 from .notes_list_view import NotesListView
 from .project_info_detail_view import ProjectInfoDetailView
+from .welcome_screen import WelcomeScreen
 
 __all__ = [
     'LocationListView',
@@ -19,4 +20,5 @@ __all__ = [
     'SourcesListView',
     'NotesListView',
     'ProjectInfoDetailView',
+    'WelcomeScreen',
 ]

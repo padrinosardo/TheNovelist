@@ -1,8 +1,8 @@
 """
 The Novelist - Main Application Window (New Version)
 """
-from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QSplitter,
-                               QMessageBox, QFileDialog, QInputDialog, QProgressBar, QLabel, QDialog)
+from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
+                               QMessageBox, QFileDialog, QInputDialog, QProgressBar, QLabel, QDialog, QStackedWidget)
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent
 
@@ -12,7 +12,7 @@ from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            ChapterDetailWidget, WorldbuildingListView, WorldbuildingDetailView)
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
-                      NotesListView, ProjectInfoDetailView)
+                      NotesListView, ProjectInfoDetailView, WelcomeScreen)
 from ui.views.project_info import (GeneralInfoView, AIProviderConfigView, AIWritingGuideView)
 from managers.ai.template_manager import TemplateManager
 from ui.dialogs import (TimelineEventDialog, SourceDetailDialog, NoteDetailDialog)
@@ -81,20 +81,30 @@ class TheNovelistMainWindow(QMainWindow):
     def _initialize_ui(self):
         """Initialize the user interface"""
         self.setWindowTitle("The Novelist")
-        self.setGeometry(100, 100, 1400, 900)
+        # Optimize for 13" screens (1280x800 minimum)
+        self.setGeometry(100, 50, 1200, 700)
+        self.setMinimumSize(1000, 600)  # Allow resizing down to reasonable minimum
 
         # Create menu bar
         self.menu_bar = MenuBar()
         self.setMenuBar(self.menu_bar)
 
-        # Central widget with splitter
+        # Central widget with stacked widget to switch between welcome and workspace
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
-        main_layout = QHBoxLayout(central_widget)
+        main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Main horizontal splitter
+        # Stacked widget to switch between welcome screen and workspace
+        self.stacked_widget = QStackedWidget()
+        main_layout.addWidget(self.stacked_widget)
+
+        # Welcome Screen (index 0)
+        self.welcome_screen = WelcomeScreen()
+        self.stacked_widget.addWidget(self.welcome_screen)
+
+        # Main horizontal splitter (index 1)
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
         # Left: Project tree
@@ -179,7 +189,8 @@ class TheNovelistMainWindow(QMainWindow):
         self.main_splitter.setStretchFactor(0, 2)
         self.main_splitter.setStretchFactor(1, 8)
 
-        main_layout.addWidget(self.main_splitter)
+        # Add splitter to stacked widget (index 1)
+        self.stacked_widget.addWidget(self.main_splitter)
 
         # Progress bar
         self.progress = QProgressBar()
@@ -205,6 +216,11 @@ class TheNovelistMainWindow(QMainWindow):
 
     def _connect_signals(self):
         """Connect all signals"""
+        # Welcome screen signals
+        self.welcome_screen.project_selected.connect(self._open_recent_project)
+        self.welcome_screen.new_project_requested.connect(self.new_project)
+        self.welcome_screen.open_other_requested.connect(self.open_project)
+
         # Menu bar signals
         self.menu_bar.new_project_requested.connect(self.new_project)
         self.menu_bar.open_project_requested.connect(self.open_project)
@@ -377,11 +393,22 @@ class TheNovelistMainWindow(QMainWindow):
         """Update UI based on project state"""
         has_project = self.project_manager.has_project()
 
+        # Toggle welcome screen vs main workspace using stacked widget
+        if has_project:
+            self.stacked_widget.setCurrentIndex(1)  # Show workspace
+        else:
+            self.stacked_widget.setCurrentIndex(0)  # Show welcome screen
+
         # Update menu bar
         self.menu_bar.set_project_open(has_project)
 
         # Update window title
         self._update_window_title()
+
+        # Load projects into welcome screen if no project open
+        if not has_project:
+            projects_metadata = self.settings.get_recent_projects_metadata()
+            self.welcome_screen.load_projects(projects_metadata)
 
         # Update project tree
         if has_project:
@@ -529,9 +556,12 @@ class TheNovelistMainWindow(QMainWindow):
             manuscript_structure = self.project_manager.manuscript_structure_manager.get_structure()
             self.project_tree.update_manuscript_structure(manuscript_structure)
 
-            # Add to recent projects
-            self.settings.add_recent_project(filepath)
-            self._update_recent_projects_menu()
+            # Add to recent projects with metadata
+            project = self.project_manager.current_project
+            if project:
+                project_metadata = project.to_dict()
+                self.settings.add_recent_project(filepath, project_metadata)
+                self._update_recent_projects_menu()
 
             # Start writing session
             self.project_manager.statistics_manager.start_session(0, 0)
@@ -592,8 +622,9 @@ class TheNovelistMainWindow(QMainWindow):
             if project:
                 self.manuscript_view.set_spell_check_language(project.language)
 
-            # Add to recent projects
-            self.settings.add_recent_project(filepath)
+            # Add to recent projects with metadata
+            project_metadata = project.to_dict()
+            self.settings.add_recent_project(filepath, project_metadata)
             self._update_recent_projects_menu()
 
             # Start writing session
@@ -704,9 +735,12 @@ class TheNovelistMainWindow(QMainWindow):
             self.is_modified = False
             self._update_ui_state()
 
-            # Add to recent projects
-            self.settings.add_recent_project(filepath)
-            self._update_recent_projects_menu()
+            # Add to recent projects with metadata
+            project = self.project_manager.current_project
+            if project:
+                project_metadata = project.to_dict()
+                self.settings.add_recent_project(filepath, project_metadata)
+                self._update_recent_projects_menu()
 
             self.statusBar().showMessage("Project saved successfully", 3000)
             return True
@@ -858,7 +892,9 @@ class TheNovelistMainWindow(QMainWindow):
                         self.characters_list_view.set_images_directory(images_dir)
                         self.is_modified = False
                         self._update_ui_state()
-                        self.settings.add_recent_project(corrupted_filepath)
+                        # Add to recent projects with metadata
+                        project_metadata = project.to_dict()
+                        self.settings.add_recent_project(corrupted_filepath, project_metadata)
                         self._update_recent_projects_menu()
                         text = self.manuscript_view.get_text()
                         word_count = len(text.split())
@@ -946,8 +982,9 @@ class TheNovelistMainWindow(QMainWindow):
             if project:
                 self.manuscript_view.set_spell_check_language(project.language)
 
-            # Add to recent projects (moves to top)
-            self.settings.add_recent_project(filepath)
+            # Add to recent projects with metadata (moves to top)
+            project_metadata = project.to_dict()
+            self.settings.add_recent_project(filepath, project_metadata)
             self._update_recent_projects_menu()
 
             self.statusBar().showMessage(f"Opened: {project.title}", 3000)

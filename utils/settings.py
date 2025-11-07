@@ -102,21 +102,46 @@ class SettingsManager:
 
     # ==================== Recent Projects ====================
 
-    def add_recent_project(self, filepath: str):
+    def add_recent_project(self, filepath: str, project_metadata: dict = None):
         """
-        Add a project to recent projects list
+        Add a project to recent projects list with metadata
 
         Args:
             filepath: Full path to project file
+            project_metadata: Optional project metadata dict (title, type, dates, etc.)
         """
         recent = self.settings.get("recent_projects", [])
 
-        # Remove if already in list
-        if filepath in recent:
-            recent.remove(filepath)
+        # Ensure recent is a list (backward compatibility)
+        if not isinstance(recent, list):
+            recent = []
+
+        # Convert old format (list of strings) to new format (list of dicts)
+        if recent and isinstance(recent[0], str):
+            recent = [{"filepath": path} for path in recent if isinstance(path, str)]
+
+        # Remove if already in list (match by filepath)
+        recent = [item for item in recent if item.get("filepath") != filepath]
+
+        # Create metadata entry
+        if project_metadata:
+            entry = {
+                "filepath": filepath,
+                "title": project_metadata.get("title", ""),
+                "author": project_metadata.get("author", ""),
+                "project_type": project_metadata.get("project_type", "novel"),
+                "created_date": project_metadata.get("created_date", ""),
+                "modified_date": project_metadata.get("modified_date", ""),
+                "last_opened_date": project_metadata.get("last_opened_date", ""),
+                "genre": project_metadata.get("genre", ""),
+                "target_word_count": project_metadata.get("target_word_count", 0)
+            }
+        else:
+            # Minimal entry if no metadata provided
+            entry = {"filepath": filepath}
 
         # Add to front
-        recent.insert(0, filepath)
+        recent.insert(0, entry)
 
         # Keep only last 10
         recent = recent[:10]
@@ -127,19 +152,71 @@ class SettingsManager:
         """
         Get list of recent project paths (only existing files)
 
+        DEPRECATED: Use get_recent_projects_metadata() for full metadata
+
         Returns:
             List[str]: List of existing project file paths
         """
+        metadata_list = self.get_recent_projects_metadata()
+        return [item["filepath"] for item in metadata_list]
+
+    def get_recent_projects_metadata(self) -> List[dict]:
+        """
+        Get list of recent projects with metadata (only existing files)
+
+        Returns:
+            List[dict]: List of project metadata dicts with keys:
+                - filepath: Full path to project file
+                - title: Project title
+                - author: Author name
+                - project_type: Type of project (novel, article, etc.)
+                - created_date: ISO format creation date
+                - modified_date: ISO format last modification date
+                - last_opened_date: ISO format last opened date
+                - genre: Genre/category
+                - target_word_count: Target word count
+        """
         recent = self.settings.get("recent_projects", [])
 
+        # Ensure recent is a list (backward compatibility)
+        if not isinstance(recent, list):
+            recent = []
+
+        # Convert old format (list of strings) to new format (list of dicts)
+        if recent and isinstance(recent[0], str):
+            recent = [{"filepath": path} for path in recent if isinstance(path, str)]
+
         # Filter out non-existent files
-        existing = [path for path in recent if os.path.exists(path)]
+        existing = [item for item in recent if os.path.exists(item.get("filepath", ""))]
 
         # Update list if any were removed
         if len(existing) != len(recent):
             self.set("recent_projects", existing)
 
         return existing
+
+    def update_project_last_opened(self, filepath: str, last_opened_date: str = None):
+        """
+        Update the last_opened_date for a project in the recent list
+
+        Args:
+            filepath: Full path to project file
+            last_opened_date: ISO format date (default: current time)
+        """
+        from datetime import datetime
+
+        if last_opened_date is None:
+            last_opened_date = datetime.now().isoformat()
+
+        recent = self.get_recent_projects_metadata()
+
+        # Find and update the project
+        for item in recent:
+            if item.get("filepath") == filepath:
+                item["last_opened_date"] = last_opened_date
+                break
+
+        self.set("recent_projects", recent)
 
     def clear_recent_projects(self):
         """Clear all recent projects"""

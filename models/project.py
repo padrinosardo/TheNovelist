@@ -30,6 +30,7 @@ class Project:
     project_type: ProjectType = ProjectType.NOVEL  # Default: Novel
     created_date: str = ""
     modified_date: str = ""
+    last_opened_date: str = ""  # Last time project was opened
     manuscript_text: str = ""
 
     # Optional metadata fields
@@ -122,6 +123,7 @@ class Project:
             project_type=project_type,
             created_date=now,
             modified_date=now,
+            last_opened_date=now,  # Initialize with creation time
             manuscript_text="",
             genre=genre,
             target_word_count=target_word_count,
@@ -134,6 +136,10 @@ class Project:
     def update_modified_date(self):
         """Update the modified_date to current time"""
         self.modified_date = datetime.now().isoformat()
+
+    def update_last_opened_date(self):
+        """Update the last_opened_date to current time"""
+        self.last_opened_date = datetime.now().isoformat()
 
     def to_dict(self) -> dict:
         """
@@ -150,6 +156,7 @@ class Project:
             'project_type': self.project_type.value if hasattr(self.project_type, 'value') else self.project_type,
             'created_date': self.created_date,
             'modified_date': self.modified_date,
+            'last_opened_date': self.last_opened_date,
             'genre': self.genre,
             'target_word_count': self.target_word_count,
             'tags': self.tags,
@@ -201,6 +208,7 @@ class Project:
             project_type=project_type,
             created_date=data.get('created_date', datetime.now().isoformat()),
             modified_date=data.get('modified_date', datetime.now().isoformat()),
+            last_opened_date=data.get('last_opened_date', ''),  # Backward compatible
             manuscript_text=manuscript_text,
             genre=data.get('genre', ''),
             target_word_count=data.get('target_word_count', 0),
