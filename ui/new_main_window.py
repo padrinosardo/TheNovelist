@@ -251,6 +251,7 @@ class TheNovelistMainWindow(QMainWindow):
         # View menu
         self.menu_bar.toggle_sidebar_requested.connect(self._toggle_sidebar)
         self.menu_bar.toggle_analysis_requested.connect(self._toggle_analysis)
+        self.menu_bar.toolbar_group_changed.connect(self._on_toolbar_group_changed)
 
         # Tools menu
         self.menu_bar.grammar_check_requested.connect(self.analyze_grammar)
@@ -430,6 +431,9 @@ class TheNovelistMainWindow(QMainWindow):
                     first_scene = all_scenes[0]
                     self.project_tree.select_scene(first_scene.id)
                     self._on_scene_selected(first_scene.id)
+
+            # Apply toolbar groups settings
+            self._apply_toolbar_groups_settings()
         else:
             self.project_tree.clear_project()
 
@@ -2200,6 +2204,34 @@ class TheNovelistMainWindow(QMainWindow):
     def _toggle_analysis(self):
         """Toggle analysis panels"""
         self.manuscript_view.toggle_analysis_panels()
+
+    def _on_toolbar_group_changed(self, group_name: str, visible: bool):
+        """
+        Handle toolbar group visibility change from menu
+
+        Args:
+            group_name: Group name ('script', 'smallcaps', 'alignment', 'special_chars', 'tables')
+            visible: True to show, False to hide
+        """
+        # Save to settings
+        self.settings.set_toolbar_group(group_name, visible)
+
+        # Apply to manuscript view's editor
+        if hasattr(self.manuscript_view, 'editor'):
+            self.manuscript_view.editor.set_toolbar_group_visibility(group_name, visible)
+
+    def _apply_toolbar_groups_settings(self):
+        """Apply toolbar groups settings from saved preferences"""
+        # Get saved settings
+        groups = self.settings.get_toolbar_groups()
+
+        # Sync menu bar checkboxes
+        self.menu_bar.sync_toolbar_groups(groups)
+
+        # Apply to manuscript view's editor
+        if hasattr(self.manuscript_view, 'editor'):
+            for group_name, visible in groups.items():
+                self.manuscript_view.editor.set_toolbar_group_visibility(group_name, visible)
 
     def _create_backup(self):
         """Create a manual backup of the current project"""

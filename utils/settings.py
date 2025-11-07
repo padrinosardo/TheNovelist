@@ -57,7 +57,14 @@ class SettingsManager:
             "theme": "light",
             "window_geometry": None,
             "last_directory": str(Path.home() / "Documents"),
-            "preferred_ui_language": "it"  # UI language (separate from project language)
+            "preferred_ui_language": "it",  # UI language (separate from project language)
+            "toolbar_groups": {
+                "script": True,  # Superscript/Subscript
+                "smallcaps": True,  # Small Caps
+                "alignment": True,  # Alignment buttons
+                "special_chars": True,  # Quote, dashes, ellipsis
+                "tables": True  # Table buttons
+            }
         }
 
     def _save_settings(self, settings: dict = None):
@@ -300,3 +307,52 @@ class SettingsManager:
             language = 'it'
 
         self.set("preferred_ui_language", language)
+
+    # ==================== Toolbar Groups ====================
+
+    def get_toolbar_groups(self) -> dict:
+        """
+        Get toolbar groups visibility settings
+
+        Returns:
+            dict: Dictionary with group names as keys and bool visibility as values
+                - script: Superscript/Subscript buttons
+                - smallcaps: Small Caps button
+                - alignment: Alignment buttons
+                - special_chars: Quote, dashes, ellipsis buttons
+                - tables: Table manipulation buttons
+        """
+        default_groups = {
+            "script": True,
+            "smallcaps": True,
+            "alignment": True,
+            "special_chars": True,
+            "tables": True
+        }
+        return self.settings.get("toolbar_groups", default_groups)
+
+    def set_toolbar_group(self, group_name: str, visible: bool):
+        """
+        Set visibility for a specific toolbar group
+
+        Args:
+            group_name: Group name ('script', 'smallcaps', 'alignment', 'special_chars', 'tables')
+            visible: True to show, False to hide
+        """
+        groups = self.get_toolbar_groups()
+        if group_name in groups:
+            groups[group_name] = visible
+            self.set("toolbar_groups", groups)
+
+    def is_toolbar_group_visible(self, group_name: str) -> bool:
+        """
+        Check if a toolbar group is visible
+
+        Args:
+            group_name: Group name
+
+        Returns:
+            bool: True if visible, False otherwise
+        """
+        groups = self.get_toolbar_groups()
+        return groups.get(group_name, True)

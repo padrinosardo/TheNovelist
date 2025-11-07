@@ -3,10 +3,10 @@ Welcome Screen - Project history and quick access
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QHeaderView, QFrame
+    QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QApplication
 )
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QPalette
 from datetime import datetime
 from typing import List, Dict
 from models.project_type import ProjectType
@@ -34,6 +34,40 @@ class WelcomeScreen(QWidget):
         self._projects_data: List[Dict] = []
         self._setup_ui()
 
+    def _is_dark_mode(self) -> bool:
+        """Detect if system is in dark mode"""
+        palette = QApplication.palette()
+        bg_color = palette.color(QPalette.ColorRole.Window)
+        # If background is dark (luminance < 128), we're in dark mode
+        return bg_color.lightness() < 128
+
+    def _get_colors(self) -> dict:
+        """Get appropriate colors based on theme"""
+        if self._is_dark_mode():
+            return {
+                'text': '#E0E0E0',
+                'text_secondary': '#B0B0B0',
+                'text_muted': '#808080',
+                'bg': '#2B2B2B',
+                'bg_alt': '#3C3C3C',
+                'border': '#555555',
+                'selected_bg': '#0D47A1',
+                'selected_text': '#FFFFFF',
+                'header_bg': '#3C3C3C',
+            }
+        else:
+            return {
+                'text': '#000000',
+                'text_secondary': '#666666',
+                'text_muted': '#999999',
+                'bg': '#FFFFFF',
+                'bg_alt': '#F5F5F5',
+                'border': '#DDDDDD',
+                'selected_bg': '#2196F3',
+                'selected_text': '#FFFFFF',
+                'header_bg': '#F5F5F5',
+            }
+
     def _setup_ui(self):
         """Setup the user interface"""
         layout = QVBoxLayout(self)
@@ -55,12 +89,13 @@ class WelcomeScreen(QWidget):
         header_layout.addWidget(title)
 
         # Subtitle - reduced size
+        colors = self._get_colors()
         subtitle = QLabel("I tuoi Progetti")
         subtitle_font = QFont()
         subtitle_font.setPointSize(14)  # Reduced from 16
         subtitle.setFont(subtitle_font)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("color: #666;")
+        subtitle.setStyleSheet(f"color: {colors['text_secondary']};")
         header_layout.addWidget(subtitle)
 
         layout.addLayout(header_layout)
@@ -113,36 +148,39 @@ class WelcomeScreen(QWidget):
         # Double-click to open
         self.projects_table.itemDoubleClicked.connect(self._on_project_double_clicked)
 
-        # Custom styling
-        self.projects_table.setStyleSheet("""
-            QTableWidget {
-                border: 2px solid #ddd;
+        # Custom styling with dynamic colors
+        self.projects_table.setStyleSheet(f"""
+            QTableWidget {{
+                border: 2px solid {colors['border']};
                 border-radius: 8px;
-                background-color: white;
+                background-color: {colors['bg']};
+                color: {colors['text']};
                 font-size: 13px;
-            }
-            QTableWidget::item {
+            }}
+            QTableWidget::item {{
                 padding: 10px;
-            }
-            QTableWidget::item:selected {
-                background-color: #2196F3;
-                color: white;
-            }
-            QHeaderView::section {
-                background-color: #f5f5f5;
+                color: {colors['text']};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {colors['selected_bg']};
+                color: {colors['selected_text']};
+            }}
+            QHeaderView::section {{
+                background-color: {colors['header_bg']};
+                color: {colors['text']};
                 padding: 10px;
                 border: none;
-                border-bottom: 2px solid #ddd;
+                border-bottom: 2px solid {colors['border']};
                 font-weight: bold;
                 font-size: 13px;
-            }
+            }}
         """)
 
         layout.addWidget(self.projects_table)
 
         # === FOOTER INFO ===
         self.info_label = QLabel("Nessun progetto recente")
-        self.info_label.setStyleSheet("color: #999; font-style: italic;")
+        self.info_label.setStyleSheet(f"color: {colors['text_muted']}; font-style: italic;")
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.info_label)
 

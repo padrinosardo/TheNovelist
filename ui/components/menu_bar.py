@@ -47,6 +47,7 @@ class MenuBar(QMenuBar):
     zoom_in_requested = Signal()
     zoom_out_requested = Signal()
     zoom_reset_requested = Signal()
+    toolbar_group_changed = Signal(str, bool)  # group_name, visible
 
     # Tools menu signals
     grammar_check_requested = Signal()
@@ -314,6 +315,51 @@ class MenuBar(QMenuBar):
 
         view_menu.addSeparator()
 
+        # Format submenu for toolbar customization
+        format_menu = view_menu.addMenu("&Format Toolbar")
+
+        # Superscript/Subscript group
+        script_action = QAction("Super/&Subscript", self)
+        script_action.setCheckable(True)
+        script_action.setChecked(True)
+        script_action.toggled.connect(lambda checked: self.toolbar_group_changed.emit("script", checked))
+        format_menu.addAction(script_action)
+        self.toolbar_script_action = script_action
+
+        # Small Caps group
+        smallcaps_action = QAction("S&mall Caps", self)
+        smallcaps_action.setCheckable(True)
+        smallcaps_action.setChecked(True)
+        smallcaps_action.toggled.connect(lambda checked: self.toolbar_group_changed.emit("smallcaps", checked))
+        format_menu.addAction(smallcaps_action)
+        self.toolbar_smallcaps_action = smallcaps_action
+
+        # Alignment group
+        alignment_action = QAction("&Alignment", self)
+        alignment_action.setCheckable(True)
+        alignment_action.setChecked(True)
+        alignment_action.toggled.connect(lambda checked: self.toolbar_group_changed.emit("alignment", checked))
+        format_menu.addAction(alignment_action)
+        self.toolbar_alignment_action = alignment_action
+
+        # Special Characters group
+        special_chars_action = QAction("Special &Characters", self)
+        special_chars_action.setCheckable(True)
+        special_chars_action.setChecked(True)
+        special_chars_action.toggled.connect(lambda checked: self.toolbar_group_changed.emit("special_chars", checked))
+        format_menu.addAction(special_chars_action)
+        self.toolbar_special_chars_action = special_chars_action
+
+        # Tables group
+        tables_action = QAction("&Tables", self)
+        tables_action.setCheckable(True)
+        tables_action.setChecked(True)
+        tables_action.toggled.connect(lambda checked: self.toolbar_group_changed.emit("tables", checked))
+        format_menu.addAction(tables_action)
+        self.toolbar_tables_action = tables_action
+
+        view_menu.addSeparator()
+
         # Zoom In
         zoom_in_action = QAction("Zoom &In", self)
         zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
@@ -459,3 +505,21 @@ class MenuBar(QMenuBar):
             clear_action = QAction("Clear Recent Projects", self)
             clear_action.triggered.connect(lambda: self.update_recent_projects([]))
             self.recent_menu.addAction(clear_action)
+
+    def sync_toolbar_groups(self, groups: dict):
+        """
+        Sync toolbar group checkboxes with settings
+
+        Args:
+            groups: Dictionary with group names and visibility states
+        """
+        if hasattr(self, 'toolbar_script_action'):
+            self.toolbar_script_action.setChecked(groups.get('script', True))
+        if hasattr(self, 'toolbar_smallcaps_action'):
+            self.toolbar_smallcaps_action.setChecked(groups.get('smallcaps', True))
+        if hasattr(self, 'toolbar_alignment_action'):
+            self.toolbar_alignment_action.setChecked(groups.get('alignment', True))
+        if hasattr(self, 'toolbar_special_chars_action'):
+            self.toolbar_special_chars_action.setChecked(groups.get('special_chars', True))
+        if hasattr(self, 'toolbar_tables_action'):
+            self.toolbar_tables_action.setChecked(groups.get('tables', True))

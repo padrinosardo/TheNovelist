@@ -21,6 +21,7 @@ from .worldbuilding_detail_view import WorldbuildingDetailView
 from .spell_check_highlighter import SpellCheckHighlighter
 from .spell_check_text_edit import SpellCheckTextEdit
 from .ai_config_widget import AIConfigWidget
+from .rich_text_editor import RichTextEditor
 
 __all__ = [
     'MenuBar',
@@ -43,5 +44,6 @@ __all__ = [
     'WorldbuildingDetailView',
     'SpellCheckHighlighter',
     'SpellCheckTextEdit',
-    'AIConfigWidget'
+    'AIConfigWidget',
+    'RichTextEditor'
 ]

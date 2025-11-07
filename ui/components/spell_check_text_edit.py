@@ -94,8 +94,15 @@ class SpellCheckTextEdit(QTextEdit):
                 # Create format for underline (does NOT affect text formatting)
                 selection = QTextEdit.ExtraSelection()
                 selection.cursor = cursor
-                selection.format.setUnderlineColor(QColor(255, 0, 0))
-                selection.format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+                underline_color = QColor(255, 0, 0)
+                selection.format.setUnderlineColor(underline_color)
+                # Use SingleUnderline for better visibility (thicker line)
+                selection.format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
+
+                # Add semi-transparent background for even better visibility
+                bg_color = QColor(underline_color)
+                bg_color.setAlpha(30)  # Very light background (30/255 transparency)
+                selection.format.setBackground(bg_color)
 
                 self.spell_check_selections.append(selection)
 

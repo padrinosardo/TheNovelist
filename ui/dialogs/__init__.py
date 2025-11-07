@@ -9,6 +9,8 @@ from .export_dialog import ExportDialog
 from .character_ai_assistant_dialog import CharacterAIAssistantDialog
 from .ai_settings_dialog import AISettingsDialog
 from .upgrade_dialog import UpgradeDialog
+from .keyboard_shortcuts_dialog import KeyboardShortcutsDialog
+from .insert_table_dialog import InsertTableDialog
 
 __all__ = [
     'NewProjectDialog',
@@ -19,4 +21,6 @@ __all__ = [
     'CharacterAIAssistantDialog',
     'AISettingsDialog',
     'UpgradeDialog',
+    'KeyboardShortcutsDialog',
+    'InsertTableDialog',
 ]
