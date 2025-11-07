@@ -2,13 +2,14 @@
 Character Detail View - Form for editing a single character
 """
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                               QLineEdit, QTextEdit, QPushButton, QScrollArea,
+                               QLineEdit, QPushButton, QScrollArea,
                                QFrame, QMessageBox)
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont, QTextCursor
 from .image_gallery import ImageGalleryWidget
 from .context_sidebar import ContextSidebar, CollapsibleSidebarContainer
 from .ai_chat_widget import AIChatWidget
+from .rich_text_editor import RichTextEditor
 from managers.character_manager import CharacterManager
 
 
@@ -131,30 +132,16 @@ class CharacterDetailView(QWidget):
         desc_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         form_layout.addWidget(desc_label)
 
-        self.description_input = QTextEdit()
-        self.description_input.setPlaceholderText(
-            "Write a detailed description of the character...\n\n"
-            "You can include:\n"
-            "- Physical appearance\n"
-            "- Personality traits\n"
-            "- Background and history\n"
-            "- Goals and motivations\n"
-            "- Relationships with other characters\n"
-            "- Any other relevant details"
+        # Rich text editor with formatting toolbar and table support
+        self.description_input = RichTextEditor(
+            show_toolbar=True,       # Show formatting toolbar
+            show_counter=False,      # Hide word counter (not needed here)
+            show_legend=False,       # Hide error legend
+            enable_spell_check=True, # Enable spell checking
+            enable_tables=True,      # Enable table functionality
+            spell_check_language='it'
         )
-        self.description_input.setMinimumHeight(300)
-        self.description_input.setStyleSheet("""
-            QTextEdit {
-                padding: 10px;
-                font-size: 13px;
-                border: 2px solid #ddd;
-                border-radius: 4px;
-                line-height: 1.6;
-            }
-            QTextEdit:focus {
-                border: 2px solid #2196F3;
-            }
-        """)
+        self.description_input.setMinimumHeight(350)  # Increased for toolbar
         form_layout.addWidget(self.description_input)
 
         # Image gallery
@@ -238,7 +225,7 @@ class CharacterDetailView(QWidget):
 
         # Load data into form
         self.name_input.setText(character.name)
-        self.description_input.setPlainText(character.description)
+        self.description_input.set_text(character.description)  # Auto-detects HTML/plain text
 
         # Load images
         image_paths = self.character_manager.get_character_image_paths(character_id)
@@ -303,18 +290,21 @@ class CharacterDetailView(QWidget):
         # Clear error styling
         self.name_input.setStyleSheet("")
 
-        description = self.description_input.toPlainText().strip()
+        # Get HTML description (preserves formatting)
+        description = self.description_input.get_text()
 
-        # Validate description length (optional, max 10000 chars)
-        if len(description) > 10000:
+        # Validate description length using plain text (not HTML)
+        plain_text = self.description_input.get_plain_text()
+        if len(plain_text) > 10000:
             QMessageBox.warning(
                 self,
                 "Description Too Long",
-                "Character description cannot exceed 10,000 characters."
+                f"Character description cannot exceed 10,000 characters.\n"
+                f"Current: {len(plain_text)} characters"
             )
             return
 
-        # Update character
+        # Update character (stores HTML)
         self.character_manager.update_character(
             self._current_character_id,
             name=name,

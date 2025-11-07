@@ -5,7 +5,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
                                QGroupBox, QLabel, QPushButton, QTextEdit)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QTextCursor
-from ui.pannels import TextEditor, ResultsPanel
+from ui.components.rich_text_editor import RichTextEditor as TextEditor
+from ui.pannels import ResultsPanel
 from ui.styles import Stili
 from ui.components.find_replace_dialog import FindReplaceDialog
 from ui.components.context_sidebar import ContextSidebar

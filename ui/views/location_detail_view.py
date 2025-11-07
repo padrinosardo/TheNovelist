@@ -3,7 +3,7 @@ Location Detail View - Edit/view a single location
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel,
-    QLineEdit, QTextEdit, QComboBox, QPushButton, QScrollArea,
+    QLineEdit, QComboBox, QPushButton, QScrollArea,
     QFrame, QListWidget, QListWidgetItem, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Signal, Qt
@@ -13,6 +13,7 @@ from models.location import Location
 from models.character import Character
 from ui.components.context_sidebar import ContextSidebar, CollapsibleSidebarContainer
 from ui.components.ai_chat_widget import AIChatWidget
+from ui.components.rich_text_editor import RichTextEditor
 import os
 
 
@@ -110,18 +111,16 @@ class LocationDetailView(QWidget):
         desc_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(desc_label)
 
-        self.description_input = QTextEdit()
-        self.description_input.setPlaceholderText("Describe this location...")
-        self.description_input.setMaximumHeight(150)
-        self.description_input.setStyleSheet("""
-            QTextEdit {
-                background-color: white;
-                color: #333;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                padding: 5px;
-            }
-        """)
+        # Rich text editor with formatting toolbar and table support
+        self.description_input = RichTextEditor(
+            show_toolbar=True,       # Show formatting toolbar
+            show_counter=False,      # Hide word counter
+            show_legend=False,       # Hide error legend
+            enable_spell_check=True, # Enable spell checking
+            enable_tables=True,      # Enable table functionality
+            spell_check_language='it'
+        )
+        self.description_input.setMaximumHeight(250)  # Increased for toolbar
         layout.addWidget(self.description_input)
 
         # === IMAGES SECTION ===
@@ -184,18 +183,16 @@ class LocationDetailView(QWidget):
         notes_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(notes_label)
 
-        self.notes_input = QTextEdit()
-        self.notes_input.setPlaceholderText("Additional notes about this location...")
-        self.notes_input.setMaximumHeight(100)
-        self.notes_input.setStyleSheet("""
-            QTextEdit {
-                background-color: white;
-                color: #333;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                padding: 5px;
-            }
-        """)
+        # Rich text editor for notes with formatting toolbar and table support
+        self.notes_input = RichTextEditor(
+            show_toolbar=True,       # Show formatting toolbar
+            show_counter=False,      # Hide word counter
+            show_legend=False,       # Hide error legend
+            enable_spell_check=True, # Enable spell checking
+            enable_tables=True,      # Enable table functionality
+            spell_check_language='it'
+        )
+        self.notes_input.setMaximumHeight(200)  # Increased for toolbar
         layout.addWidget(self.notes_input)
 
         # Add stretch
@@ -274,8 +271,8 @@ class LocationDetailView(QWidget):
         # Load basic info
         self.name_input.setText(location.name)
         self.type_input.setText(location.location_type or "")
-        self.description_input.setPlainText(location.description)
-        self.notes_input.setPlainText(location.notes)
+        self.description_input.set_text(location.description)  # Auto-detects HTML/plain text
+        self.notes_input.set_text(location.notes)  # Auto-detects HTML/plain text
 
         # Load parent location
         self._update_parent_combo(exclude_id=location.id)
@@ -439,22 +436,22 @@ class LocationDetailView(QWidget):
             # Update existing
             location = self._current_location
             location.name = name
-            location.description = self.description_input.toPlainText()
+            location.description = self.description_input.get_text()  # Get HTML
             location.location_type = self.type_input.text().strip()
             location.parent_location_id = parent_location_id
             location.characters_present = selected_characters
             location.images = all_images
-            location.notes = self.notes_input.toPlainText()
+            location.notes = self.notes_input.get_text()  # Get HTML
         else:
             # Create new
             location = Location(
                 name=name,
-                description=self.description_input.toPlainText(),
+                description=self.description_input.get_text(),  # Get HTML
                 location_type=self.type_input.text().strip(),
                 parent_location_id=parent_location_id,
                 characters_present=selected_characters,
                 images=all_images,
-                notes=self.notes_input.toPlainText()
+                notes=self.notes_input.get_text()  # Get HTML
             )
 
         # Emit save signal
