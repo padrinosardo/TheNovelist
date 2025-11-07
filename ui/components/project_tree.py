@@ -171,17 +171,39 @@ class ProjectTree(QTreeWidget):
 
         # Add chapters and scenes if structure exists
         if manuscript_structure:
-            for chapter in sorted(manuscript_structure.chapters, key=lambda c: c.order):
-                chapter_item = QTreeWidgetItem(manuscript_item)
-                chapter_item.setText(0, f"  📖 {chapter.title}")
-                chapter_item.setExpanded(True)
-                chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+            if manuscript_structure.use_parts_structure:
+                # Modern 3-level structure: Parts → Chapters → Scenes
+                for part in sorted(manuscript_structure.parts, key=lambda p: p.order):
+                    part_item = QTreeWidgetItem(manuscript_item)
+                    part_item.setText(0, f"  📚 {part.title}")
+                    part_item.setExpanded(True)
+                    part_item.setData(0, Qt.ItemDataRole.UserRole, f"part:{part.id}")
 
-                # Add scenes under chapter
-                for scene in sorted(chapter.scenes, key=lambda s: s.order):
-                    scene_item = QTreeWidgetItem(chapter_item)
-                    scene_item.setText(0, f"    📝 {scene.title}")
-                    scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
+                    # Add chapters under part
+                    for chapter in sorted(part.chapters, key=lambda c: c.order):
+                        chapter_item = QTreeWidgetItem(part_item)
+                        chapter_item.setText(0, f"    📖 {chapter.title}")
+                        chapter_item.setExpanded(True)
+                        chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+
+                        # Add scenes under chapter
+                        for scene in sorted(chapter.scenes, key=lambda s: s.order):
+                            scene_item = QTreeWidgetItem(chapter_item)
+                            scene_item.setText(0, f"      📝 {scene.title}")
+                            scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
+            else:
+                # Legacy 2-level structure: Chapters → Scenes
+                for chapter in sorted(manuscript_structure.chapters, key=lambda c: c.order):
+                    chapter_item = QTreeWidgetItem(manuscript_item)
+                    chapter_item.setText(0, f"  📖 {chapter.title}")
+                    chapter_item.setExpanded(True)
+                    chapter_item.setData(0, Qt.ItemDataRole.UserRole, f"chapter:{chapter.id}")
+
+                    # Add scenes under chapter
+                    for scene in sorted(chapter.scenes, key=lambda s: s.order):
+                        scene_item = QTreeWidgetItem(chapter_item)
+                        scene_item.setText(0, f"    📝 {scene.title}")
+                        scene_item.setData(0, Qt.ItemDataRole.UserRole, f"scene:{scene.id}")
 
         # Characters node
         characters_item = QTreeWidgetItem(root)

@@ -82,6 +82,7 @@ class TextEditor(QFrame):
         """Initialize the text editor"""
         super().__init__()
         self.error_highlights = []
+        self.grammar_extra_selections = []  # Store grammar error selections separately
         self._initialize_ui()
 
     def _initialize_ui(self):
@@ -284,63 +285,80 @@ class TextEditor(QFrame):
 
     def highlight_errors(self, errors):
         """
-        Highlight errors in the editor - SAFE VERSION
+        Highlight errors in the editor using ExtraSelections (preserves formatting)
 
         Args:
             errors: List of error dictionaries
         """
+        # Clear previous grammar highlights
+        self.grammar_extra_selections = []
+
         if not errors:
+            self._update_extra_selections()
             return
 
         try:
-            # Disconnect textChanged to avoid recursion
-            self.editor.textChanged.disconnect(self._update_counter)
-
-            # Clear previous highlights
-            self.clear_highlights()
-
             # Get document
             document = self.editor.document()
             if not document:
                 return
 
-            # Apply each highlight
+            # Create ExtraSelections for each error
             for error in errors:
                 try:
-                    self._apply_highlight_safe(error, document)
+                    selection = self._create_error_selection(error, document)
+                    if selection:
+                        self.grammar_extra_selections.append(selection)
                 except Exception as e:
                     print(f"Warning: Could not highlight error: {e}")
                     continue
 
+            # Apply all selections (preserves user formatting)
+            self._update_extra_selections()
+
         except Exception as e:
             print(f"Error in highlight_errors: {e}")
-        finally:
-            # Reconnect signal
-            self.editor.textChanged.connect(self._update_counter)
 
-    def _apply_highlight_safe(self, error, document):
-        """Apply highlight safely with bounds checking"""
+    def _create_error_selection(self, error, document):
+        """Create an ExtraSelection for an error without affecting text formatting"""
         start = error.get('start', 0)
         end = error.get('end', 0)
 
         # Validate positions
         text_length = len(self.editor.toPlainText())
         if start < 0 or end > text_length or start >= end:
-            return
+            return None
 
-        # Create cursor
+        # Create cursor for selection
         cursor = QTextCursor(document)
         cursor.setPosition(start)
-        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
-        # Create format
-        fmt = QTextCharFormat()
+        # Create ExtraSelection (does NOT modify text formatting)
+        from PySide6.QtWidgets import QTextEdit
+        selection = QTextEdit.ExtraSelection()
+        selection.cursor = cursor
+
+        # Set underline style (preserves bold/italic/underline from user)
         color = self._get_category_color(error.get('category', 'custom'))
-        fmt.setUnderlineColor(color)
-        fmt.setUnderlineStyle(QTextCharFormat.WaveUnderline)
+        selection.format.setUnderlineColor(color)
+        selection.format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
 
-        # Apply format
-        cursor.setCharFormat(fmt)
+        return selection
+
+    def _update_extra_selections(self):
+        """Update all ExtraSelections (grammar + spell check)"""
+        # Start with grammar selections
+        all_selections = self.grammar_extra_selections.copy()
+
+        # Add spell check selections if available
+        if hasattr(self.editor, 'get_spell_check_selections'):
+            spell_selections = self.editor.get_spell_check_selections()
+            if spell_selections:
+                all_selections.extend(spell_selections)
+
+        # Apply all selections at once (preserves user formatting)
+        self.editor.setExtraSelections(all_selections)
 
     def _get_category_color(self, category):
         """Get color for error category"""
@@ -357,21 +375,11 @@ class TextEditor(QFrame):
         return colors.get(category, QColor(255, 0, 0))
 
     def clear_highlights(self):
-        """Clear all highlights safely"""
+        """Clear all grammar highlights (preserves user formatting)"""
         try:
-            # Get document
-            document = self.editor.document()
-            if not document:
-                return
-
-            # Select all and reset format
-            cursor = QTextCursor(document)
-            cursor.select(QTextCursor.Document)
-
-            fmt = QTextCharFormat()
-            fmt.setUnderlineStyle(QTextCharFormat.NoUnderline)
-            cursor.setCharFormat(fmt)
-
+            # Clear grammar selections
+            self.grammar_extra_selections = []
+            self._update_extra_selections()
             self.error_highlights = []
         except Exception as e:
             print(f"Error clearing highlights: {e}")
@@ -385,15 +393,34 @@ class TextEditor(QFrame):
         return self.editor.toPlainText()
 
     def set_text(self, text):
-        """Set text in the editor (supports both plain text and HTML)"""
+        """
+        Set text in the editor (supports both plain text and HTML)
+
+        Args:
+            text: Content to set (HTML or plain text)
+        """
         if not text:
             self.editor.clear()
-        elif text.strip().startswith('<') or '<html>' in text.lower():
-            # It's HTML, preserve formatting
-            self.editor.setHtml(text)
         else:
-            # It's plain text
-            self.editor.setPlainText(text)
+            # Check if content is HTML by looking for HTML tags
+            # Qt's toHtml() always generates HTML with tags, so we need to detect them
+            text_stripped = text.strip()
+            is_html = (
+                text_stripped.startswith('<!DOCTYPE') or
+                text_stripped.startswith('<html') or
+                '<p style=' in text or
+                '<span style=' in text or
+                ('<p>' in text and '</p>' in text) or
+                ('</b>' in text or '</i>' in text or '</u>' in text)
+            )
+
+            if is_html:
+                # It's HTML, preserve formatting
+                self.editor.setHtml(text)
+            else:
+                # It's plain text
+                self.editor.setPlainText(text)
+
         self._update_counter()
 
     def clear(self):

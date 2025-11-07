@@ -2,14 +2,16 @@
 Spell Check Text Edit - QTextEdit with spell checking context menu
 """
 from PySide6.QtWidgets import QTextEdit, QMenu
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QTextCursor, QAction, QContextMenuEvent, QMouseEvent
-from ui.components.spell_check_highlighter import SpellCheckHighlighter
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QTextCursor, QAction, QContextMenuEvent, QMouseEvent, QTextCharFormat, QColor
+from spellchecker import SpellChecker
+import re
 
 
 class SpellCheckTextEdit(QTextEdit):
     """
     QTextEdit with integrated spell checking and context menu for suggestions
+    Uses ExtraSelections instead of QSyntaxHighlighter to preserve user formatting
     """
 
     # Signal emitted when a word is added to the custom dictionary
@@ -18,14 +20,101 @@ class SpellCheckTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # Initialize spell checker highlighter
-        self.spell_highlighter = None
+        # Initialize spell checker (no highlighter - we use ExtraSelections)
+        self.spell_checker = SpellChecker(language='it')
+        self.custom_words = set()
+        self._spell_check_enabled = True
+        self.spell_check_selections = []  # Store spell check selections
 
         # UI language (default: Italian)
         self._ui_language = 'it'
 
         # Disable default context menu to use our custom one
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+
+        # Timer to delay spell checking (avoids checking on every keystroke)
+        self.spell_check_timer = QTimer()
+        self.spell_check_timer.setSingleShot(True)
+        self.spell_check_timer.timeout.connect(self._perform_spell_check)
+
+        # Connect to text changes
+        self.textChanged.connect(self._on_text_changed)
+
+    def _on_text_changed(self):
+        """Handle text changes - schedule spell check"""
+        if self._spell_check_enabled:
+            # Delay spell checking by 500ms to avoid checking on every keystroke
+            self.spell_check_timer.stop()
+            self.spell_check_timer.start(500)
+
+    def _perform_spell_check(self):
+        """Perform spell checking using ExtraSelections (preserves user formatting)"""
+        self.spell_check_selections = []
+
+        if not self._spell_check_enabled:
+            self._notify_selections_updated()
+            return
+
+        # Get document text
+        text = self.toPlainText()
+
+        # Find all words
+        word_pattern = re.compile(r"\b[\w']+\b")
+        for match in word_pattern.finditer(text):
+            word = match.group(0)
+            start = match.start()
+            length = len(word)
+
+            # Skip if word is a number or too short
+            if word.isdigit() or len(word) < 2:
+                continue
+
+            # Skip if word is all uppercase (acronyms)
+            if word.isupper() and len(word) > 1:
+                continue
+
+            # Skip if word starts with uppercase (proper noun)
+            if word[0].isupper():
+                continue
+
+            # Check spelling
+            word_lower = word.lower()
+
+            # Skip if in custom dictionary
+            if word_lower in self.custom_words:
+                continue
+
+            # Check if misspelled
+            if self.spell_checker.unknown([word_lower]):
+                # Create selection for this misspelled word
+                cursor = QTextCursor(self.document())
+                cursor.setPosition(start)
+                cursor.setPosition(start + length, QTextCursor.MoveMode.KeepAnchor)
+
+                # Create format for underline (does NOT affect text formatting)
+                selection = QTextEdit.ExtraSelection()
+                selection.cursor = cursor
+                selection.format.setUnderlineColor(QColor(255, 0, 0))
+                selection.format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+
+                self.spell_check_selections.append(selection)
+
+        # Notify parent to update all selections
+        self._notify_selections_updated()
+
+    def _notify_selections_updated(self):
+        """Notify parent TextEditor to update all ExtraSelections"""
+        # Try to find parent TextEditor and call its update method
+        parent = self.parent()
+        while parent:
+            if hasattr(parent, '_update_extra_selections'):
+                parent._update_extra_selections()
+                break
+            parent = parent.parent()
+
+    def get_spell_check_selections(self):
+        """Get current spell check ExtraSelections"""
+        return self.spell_check_selections
 
     def enable_spell_checking(self, language='it'):
         """
@@ -34,20 +123,18 @@ class SpellCheckTextEdit(QTextEdit):
         Args:
             language: Language code (e.g., 'it', 'en', 'es')
         """
-        if self.spell_highlighter is None:
-            self.spell_highlighter = SpellCheckHighlighter(self.document(), language)
-        else:
-            self.spell_highlighter.set_language(language)
-            self.spell_highlighter.set_enabled(True)
+        self.spell_checker = SpellChecker(language=language)
+        self._spell_check_enabled = True
+        self._perform_spell_check()
 
     def disable_spell_checking(self):
         """Disable spell checking"""
-        if self.spell_highlighter:
-            self.spell_highlighter.set_enabled(False)
+        self._spell_check_enabled = False
+        self.spell_check_selections = []
 
     def is_spell_checking_enabled(self) -> bool:
         """Check if spell checking is enabled"""
-        return self.spell_highlighter and self.spell_highlighter.is_enabled()
+        return self._spell_check_enabled
 
     def add_word_to_dictionary(self, word: str):
         """
@@ -56,9 +143,50 @@ class SpellCheckTextEdit(QTextEdit):
         Args:
             word: Word to add
         """
-        if self.spell_highlighter:
-            self.spell_highlighter.add_word_to_dictionary(word)
-            self.word_added_to_dictionary.emit(word)
+        word_lower = word.lower()
+        self.custom_words.add(word_lower)
+        self.word_added_to_dictionary.emit(word)
+        # Refresh spell checking to remove underline
+        self._perform_spell_check()
+
+    def is_word_misspelled(self, word: str) -> bool:
+        """
+        Check if a word is misspelled
+
+        Args:
+            word: Word to check
+
+        Returns:
+            bool: True if misspelled
+        """
+        if not word or len(word) < 2:
+            return False
+
+        word_lower = word.lower()
+
+        # Skip if in custom dictionary
+        if word_lower in self.custom_words:
+            return False
+
+        # Check with spell checker
+        return bool(self.spell_checker.unknown([word_lower]))
+
+    def get_suggestions(self, word: str, max_suggestions: int = 5) -> list:
+        """
+        Get spelling suggestions for a misspelled word
+
+        Args:
+            word: Misspelled word
+            max_suggestions: Maximum number of suggestions
+
+        Returns:
+            list: List of suggestions
+        """
+        word_lower = word.lower()
+        candidates = self.spell_checker.candidates(word_lower)
+        if candidates:
+            return list(candidates)[:max_suggestions]
+        return []
 
     def _get_word_under_cursor(self, cursor: QTextCursor = None) -> tuple:
         """
@@ -99,16 +227,15 @@ class SpellCheckTextEdit(QTextEdit):
         word, word_cursor = self._get_word_under_cursor(cursor)
 
         # Check if spell checking is enabled and word is misspelled
-        if (self.spell_highlighter and
-            self.spell_highlighter.is_enabled() and
+        if (self._spell_check_enabled and
             word and
             len(word) > 1 and
             not word[0].isupper()):  # Only show suggestions for non-proper nouns
 
             # Check if word is actually misspelled
-            if self.spell_highlighter.is_word_misspelled(word):
+            if self.is_word_misspelled(word):
                 # Add suggestions
-                suggestions = self.spell_highlighter.get_suggestions(word)
+                suggestions = self.get_suggestions(word)
 
                 if suggestions:
                     # Add header
@@ -166,15 +293,14 @@ class SpellCheckTextEdit(QTextEdit):
         select_all_action.triggered.connect(self.selectAll)
 
         # Add spell checking toggle
-        if self.spell_highlighter:
-            menu.addSeparator()
-            toggle_spell_check = QAction(
-                ui_labels['spell_check_on'] if self.is_spell_checking_enabled()
-                else ui_labels['spell_check_off'],
-                self
-            )
-            toggle_spell_check.triggered.connect(self._toggle_spell_checking)
-            menu.addAction(toggle_spell_check)
+        menu.addSeparator()
+        toggle_spell_check = QAction(
+            ui_labels['spell_check_on'] if self.is_spell_checking_enabled()
+            else ui_labels['spell_check_off'],
+            self
+        )
+        toggle_spell_check.triggered.connect(self._toggle_spell_checking)
+        menu.addAction(toggle_spell_check)
 
         # Show menu at global position
         global_pos = self.mapToGlobal(position)
@@ -232,11 +358,10 @@ class SpellCheckTextEdit(QTextEdit):
 
     def _toggle_spell_checking(self):
         """Toggle spell checking on/off"""
-        if self.spell_highlighter:
-            if self.spell_highlighter.is_enabled():
-                self.disable_spell_checking()
-            else:
-                self.spell_highlighter.set_enabled(True)
+        if self._spell_check_enabled:
+            self.disable_spell_checking()
+        else:
+            self.enable_spell_checking(self._ui_language)
 
     def set_language(self, language: str):
         """
@@ -245,10 +370,10 @@ class SpellCheckTextEdit(QTextEdit):
         Args:
             language: Language code (e.g., 'it', 'en', 'es')
         """
-        if self.spell_highlighter:
-            self.spell_highlighter.set_language(language)
-        else:
-            self.enable_spell_checking(language)
+        self._ui_language = language
+        self.spell_checker = SpellChecker(language=language)
+        if self._spell_check_enabled:
+            self._perform_spell_check()
 
     def add_words_to_dictionary(self, words: list):
         """
@@ -257,8 +382,12 @@ class SpellCheckTextEdit(QTextEdit):
         Args:
             words: List of words to add
         """
-        if self.spell_highlighter:
-            self.spell_highlighter.add_words_to_dictionary(words)
+        for word in words:
+            word_lower = word.lower()
+            self.custom_words.add(word_lower)
+        # Refresh spell checking
+        if self._spell_check_enabled:
+            self._perform_spell_check()
 
     def set_ui_language(self, language: str):
         """

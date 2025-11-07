@@ -36,12 +36,16 @@ class SpellCheckHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text):
         """
         Highlight misspelled words in the given text block
+        IMPORTANT: Preserves existing user formatting (bold, italic, underline)
 
         Args:
             text: Text block to check
         """
         if not self._enabled:
             return
+
+        # Get current block to access existing formats
+        block = self.currentBlock()
 
         # Find all words in the text
         iterator = self.word_pattern.globalMatch(text)
@@ -74,8 +78,19 @@ class SpellCheckHighlighter(QSyntaxHighlighter):
 
             # Check if misspelled
             if self.spell_checker.unknown([word_lower]):
-                # Apply error formatting
-                self.setFormat(start, length, self.error_format)
+                # PRESERVE USER FORMATTING: Get existing format and merge
+                # Get the format that was already applied in this block
+                existing_format = self.format(start)
+
+                # Create new format preserving existing properties
+                merged_format = QTextCharFormat(existing_format)
+
+                # Add spell-check underline (preserves bold/italic/underline from user)
+                merged_format.setUnderlineColor(QColor(255, 0, 0))  # Red
+                merged_format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+
+                # Apply merged format
+                self.setFormat(start, length, merged_format)
 
     def set_language(self, language: str):
         """

@@ -159,14 +159,17 @@ class ManuscriptView(QWidget):
         """Handle editor text changes"""
         self.text_changed.emit()
 
-        # Update word count
-        text = self.editor.get_text()
-        word_count = len(text.split()) if text else 0
+        # Get HTML content for saving (preserves formatting)
+        html_content = self.editor.get_text()
+
+        # Get plain text for word count (without HTML tags)
+        plain_text = self.editor.get_plain_text()
+        word_count = len(plain_text.split()) if plain_text else 0
         self.word_count_label.setText(f"{word_count} words")
 
-        # Emit scene content changed if we're editing a scene
+        # Emit scene content changed with HTML content (preserves formatting)
         if self._current_scene_id:
-            self.scene_content_changed.emit(self._current_scene_id, text)
+            self.scene_content_changed.emit(self._current_scene_id, html_content)
 
     def _on_insert_ai_text(self, text: str):
         """
@@ -300,8 +303,14 @@ class ManuscriptView(QWidget):
         # Update breadcrumb
         self.breadcrumb_label.setText(f"📖 {chapter_title} > 📝 {scene_title}")
 
-        # Update word count
-        word_count = len(content.split()) if content else 0
+        # Update word count (use plain text to avoid counting HTML tags)
+        # toPlainText() will be called after setHtml/setPlainText in set_text
+        # For now, calculate from plain text version of content
+        from PySide6.QtGui import QTextDocument
+        doc = QTextDocument()
+        doc.setHtml(content) if ('<' in content) else doc.setPlainText(content)
+        plain_text = doc.toPlainText()
+        word_count = len(plain_text.split()) if plain_text else 0
         self.word_count_label.setText(f"{word_count} words")
 
         # Enable/disable navigation buttons

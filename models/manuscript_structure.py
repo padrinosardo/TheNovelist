@@ -5,6 +5,27 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from datetime import datetime
 import uuid
+import re
+
+
+def _strip_html_tags(text: str) -> str:
+    """
+    Remove HTML tags from text for word counting
+
+    Args:
+        text: Text potentially containing HTML tags
+
+    Returns:
+        str: Plain text without HTML tags
+    """
+    if not text:
+        return ""
+
+    # Remove HTML tags using regex
+    clean = re.sub(r'<[^>]+>', '', text)
+    # Remove extra whitespace
+    clean = re.sub(r'\s+', ' ', clean)
+    return clean.strip()
 
 
 @dataclass
@@ -38,7 +59,9 @@ class Scene:
             Scene: New scene instance
         """
         now = datetime.now().isoformat()
-        word_count = len(content.split()) if content else 0
+        # Calculate word count from plain text (strip HTML tags)
+        plain_text = _strip_html_tags(content)
+        word_count = len(plain_text.split()) if plain_text else 0
 
         return Scene(
             id=str(uuid.uuid4()),
@@ -55,10 +78,12 @@ class Scene:
         Update scene content and recalculate word count
 
         Args:
-            content: New content
+            content: New content (may contain HTML formatting)
         """
         self.content = content
-        self.word_count = len(content.split()) if content else 0
+        # Calculate word count from plain text (strip HTML tags)
+        plain_text = _strip_html_tags(content)
+        self.word_count = len(plain_text.split()) if plain_text else 0
         self.modified_date = datetime.now().isoformat()
 
     def to_dict(self) -> dict:
