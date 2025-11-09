@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QTextCursor, QFont
 from typing import Optional, Dict, List
+from utils.logger import logger
 
 
 class AIMessageBubble(QFrame):
@@ -392,37 +393,73 @@ class AIChatWidget(QWidget):
         layout.addWidget(input_container)
 
     def _populate_quick_prompts(self):
-        """Populate quick prompts based on context type"""
+        """Populate quick prompts based on context type - includes AI commands"""
+        # Standard quick prompts
         if self.context_type == "Character":
             prompts = [
-                ("What's their biggest fear?", "fear"),
-                ("Suggest a backstory", "backstory"),
-                ("What motivates them?", "motivation"),
-                ("Describe their personality in detail", "personality"),
-                ("What's their fatal flaw?", "flaw"),
-                ("Generate a dialogue sample", "dialogue"),
+                ("What's their biggest fear?", "fear", False),
+                ("Suggest a backstory", "backstory", False),
+                ("What motivates them?", "motivation", False),
+                ("Describe their personality in detail", "personality", False),
+                ("What's their fatal flaw?", "flaw", False),
+                ("Generate a dialogue sample", "dialogue", False),
             ]
         elif self.context_type == "Location":
             prompts = [
-                ("Describe the atmosphere", "atmosphere"),
-                ("What secrets does this place hold?", "secrets"),
-                ("Describe the architecture/layout", "layout"),
-                ("What sounds/smells are present?", "sensory"),
+                ("Describe the atmosphere", "atmosphere", False),
+                ("What secrets does this place hold?", "secrets", False),
+                ("Describe the architecture/layout", "layout", False),
+                ("What sounds/smells are present?", "sensory", False),
             ]
         elif self.context_type == "Note":
             prompts = [
-                ("Expand this idea", "expand"),
-                ("Find potential conflicts", "conflicts"),
-                ("Suggest related themes", "themes"),
+                ("Expand this idea", "expand", False),
+                ("Find potential conflicts", "conflicts", False),
+                ("Suggest related themes", "themes", False),
             ]
         else:
             prompts = [
-                ("Expand this idea", "expand"),
-                ("Provide more details", "details"),
+                ("Expand this idea", "expand", False),
+                ("Provide more details", "details", False),
             ]
 
-        for label, value in prompts:
-            self.quick_prompts_combo.addItem(label, value)
+        # Add standard prompts
+        for label, value, _ in prompts:
+            self.quick_prompts_combo.addItem(f"💭 {label}", value)
+
+        # Add AI commands if available
+        ai_commands = self._get_available_ai_commands()
+        if ai_commands:
+            # Add separator
+            self.quick_prompts_combo.insertSeparator(self.quick_prompts_combo.count())
+
+            # Add AI commands with different icon
+            for cmd in ai_commands:
+                label = f"⚡ #{cmd['name']} - {cmd['description']}"
+                # Store command name as value with special prefix to identify it
+                self.quick_prompts_combo.addItem(label, f"#command:{cmd['name']}")
+
+    def _get_available_ai_commands(self) -> List[Dict]:
+        """
+        Get AI commands available for current context type
+
+        Returns:
+            List of available AI command dictionaries
+        """
+        if not self.project_manager or not self.project_manager.current_project:
+            return []
+
+        project = self.project_manager.current_project
+        if not hasattr(project, 'ai_commands') or not project.ai_commands:
+            return []
+
+        from managers.ai.command_parser import AICommandParser
+        parser = AICommandParser()
+
+        return parser.get_available_commands(
+            self.context_type,
+            project.ai_commands
+        )
 
     def eventFilter(self, obj, event):
         """Handle keyboard shortcuts in input field"""
@@ -440,10 +477,24 @@ class AIChatWidget(QWidget):
         return super().eventFilter(obj, event)
 
     def _on_prompt_selected(self, index: int):
-        """Handle quick prompt selection"""
-        if index > 0:  # Skip "-- Select --"
-            prompt_text = self.quick_prompts_combo.currentText()
-            self.question_input.setPlainText(prompt_text)
+        """Handle quick prompt selection - supports both prompts and AI commands"""
+        if index > 0:  # Skip "Quick prompts..."
+            value = self.quick_prompts_combo.currentData()
+
+            # Check if it's an AI command
+            if value and str(value).startswith('#command:'):
+                # Extract command name
+                command_name = value.replace('#command:', '')
+                # Insert as #command
+                self.question_input.setPlainText(f"#{command_name}")
+            else:
+                # Standard prompt - use display text (remove icon)
+                prompt_text = self.quick_prompts_combo.currentText()
+                # Remove emoji prefix if present
+                if '💭 ' in prompt_text:
+                    prompt_text = prompt_text.replace('💭 ', '')
+                self.question_input.setPlainText(prompt_text)
+
             self.quick_prompts_combo.setCurrentIndex(0)  # Reset
             self.question_input.setFocus()  # Focus input for easy editing
 
@@ -718,6 +769,7 @@ Your role is to help writers develop rich, immersive locations and settings.
                     error="No AI provider available."
                 )
 
+            print(f"[DEBUG AI CHAT] Calling _generate_with_provider with {len(messages)} messages")
             return self._generate_with_provider(provider, messages, system_prompt)
 
         else:
@@ -777,6 +829,22 @@ Provide helpful, detailed, and creative suggestions."""
         # Store context for AI calls
         self.context_data = context_data
         self.current_entity = entity
+
+        # Refresh quick prompts (AI commands might have changed)
+        self.refresh_quick_prompts()
+
+    def refresh_quick_prompts(self):
+        """
+        Refresh quick prompts dropdown (useful when AI commands are modified)
+        """
+        # Clear existing items
+        self.quick_prompts_combo.clear()
+
+        # Re-add placeholder
+        self.quick_prompts_combo.addItem("Quick prompts...", "")
+
+        # Re-populate
+        self._populate_quick_prompts()
 
     def _handle_command(self, command_text: str):
         """
@@ -856,7 +924,9 @@ Provide helpful, detailed, and creative suggestions."""
         variables = {}
 
         if self.context_type == "Scene":
-            variables['scene_content'] = self.context_data.get('content', '')
+            # Get CURRENT content from editor (not cached context_data)
+            current_content = self._get_current_scene_content()
+            variables['scene_content'] = current_content if current_content else self.context_data.get('content', '')
             variables['scene_title'] = self.context_data.get('scene_title', '')
             variables['chapter_title'] = self.context_data.get('chapter_title', '')
             variables['word_count'] = str(len(variables['scene_content'].split()))
@@ -895,6 +965,24 @@ Provide helpful, detailed, and creative suggestions."""
             while parent:
                 if hasattr(parent, 'get_selected_text'):
                     return parent.get_selected_text()
+                parent = parent.parent() if hasattr(parent, 'parent') else None
+        except:
+            pass
+        return ''
+
+    def _get_current_scene_content(self) -> str:
+        """
+        Try to get current scene content from editor if available
+
+        Returns:
+            Current scene content or empty string
+        """
+        try:
+            # Try to get from parent ManuscriptView
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'get_current_content'):
+                    return parent.get_current_content()
                 parent = parent.parent() if hasattr(parent, 'parent') else None
         except:
             pass
@@ -971,8 +1059,51 @@ Provide helpful, detailed, and creative suggestions."""
                 self._scroll_to_bottom()
                 return
 
-            # Call AI (with RAG if enabled - command already has full context in prompt)
-            response = self._generate_with_provider(provider, messages, system_prompt=None)
+            # Build system_prompt based on context type (Scene, Character, etc.)
+            system_prompt = None
+            if self.context_type == "Scene" and self.current_entity:
+                from managers.ai.context_builder import SceneContextBuilder
+                context_builder = SceneContextBuilder(project)
+                context = context_builder.build_full_context(self.current_entity)
+
+                system_prompt = f"""You are an expert creative writing assistant specializing in scene development and prose writing.
+
+---
+
+{context}"""
+            elif self.context_type == "Character" and self.current_entity:
+                from managers.ai.context_builder import CharacterContextBuilder
+                context_builder = CharacterContextBuilder(project)
+                context = context_builder.build_full_context(self.current_entity)
+
+                system_prompt = f"""You are a creative writing assistant helping to develop compelling characters.
+
+---
+
+{context}"""
+            elif self.context_type == "Location" and self.current_entity:
+                from managers.ai.context_builder import LocationContextBuilder
+                context_builder = LocationContextBuilder(project)
+                context = context_builder.build_full_context(self.current_entity)
+
+                system_prompt = f"""You are a creative writing assistant helping to develop vivid and detailed locations.
+
+---
+
+{context}"""
+            elif self.context_type == "Note" and self.current_entity:
+                from managers.ai.context_builder import NoteContextBuilder
+                context_builder = NoteContextBuilder(project)
+                context = context_builder.build_full_context(self.current_entity)
+
+                system_prompt = f"""You are a creative writing assistant helping to develop and expand story ideas and notes.
+
+---
+
+{context}"""
+
+            # Call AI with context in system_prompt
+            response = self._generate_with_provider(provider, messages, system_prompt=system_prompt)
 
             # Remove loading bubble
             loading_bubble.deleteLater()

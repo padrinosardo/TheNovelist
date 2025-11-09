@@ -199,17 +199,17 @@ class TheNovelistMainWindow(QMainWindow):
         self.progress.setStyleSheet(Stili.progress_bar())
         self.statusBar().addPermanentWidget(self.progress)
 
-        # AI Provider indicator
-        self.ai_provider_label = QLabel()
-        self.ai_provider_label.setStyleSheet("color: palette(window-text); font-size: 11px; margin-right: 10px; padding: 2px 6px; background-color: palette(light); border-radius: 3px;")
-        self.ai_provider_label.setVisible(False)
-        self.statusBar().addPermanentWidget(self.ai_provider_label)
-
         # Auto-save indicator
         self.auto_save_label = QLabel()
         self.auto_save_label.setStyleSheet("color: #666; font-size: 11px; margin-right: 10px;")
         self.auto_save_label.setVisible(False)
         self.statusBar().addPermanentWidget(self.auto_save_label)
+
+        # AI Provider indicator (rightmost)
+        self.ai_provider_label = QLabel()
+        self.ai_provider_label.setStyleSheet("color: palette(window-text); font-size: 11px; margin-right: 10px; padding: 2px 6px; background-color: palette(light); border-radius: 3px;")
+        self.ai_provider_label.setVisible(False)
+        self.statusBar().addPermanentWidget(self.ai_provider_label)
 
         # Status bar
         self.statusBar().showMessage("Ready - Create or open a project to start")
@@ -251,6 +251,7 @@ class TheNovelistMainWindow(QMainWindow):
         # View menu
         self.menu_bar.toggle_sidebar_requested.connect(self._toggle_sidebar)
         self.menu_bar.toggle_analysis_requested.connect(self._toggle_analysis)
+        self.menu_bar.analysis_tab_toggled.connect(self._on_analysis_tab_toggled)
         self.menu_bar.toolbar_group_changed.connect(self._on_toolbar_group_changed)
 
         # Tools menu
@@ -434,6 +435,12 @@ class TheNovelistMainWindow(QMainWindow):
 
             # Apply toolbar groups settings
             self._apply_toolbar_groups_settings()
+
+            # Apply analysis tabs visibility settings
+            self._apply_analysis_tabs_state()
+
+            # Apply saved zoom level
+            self._apply_saved_zoom_level()
         else:
             self.project_tree.clear_project()
 
@@ -543,6 +550,9 @@ class TheNovelistMainWindow(QMainWindow):
             if images_dir:
                 self.project_manager.character_manager.set_images_directory(images_dir)
 
+            # Update manuscript view with new manuscript manager
+            self.manuscript_view.manuscript_manager = self.project_manager.manuscript_structure_manager
+
             # Update character detail view with manager
             self.character_detail_view.set_character_manager(
                 self.project_manager.character_manager
@@ -610,6 +620,9 @@ class TheNovelistMainWindow(QMainWindow):
             images_dir = self.project_manager.get_temp_images_directory()
             if images_dir:
                 self.project_manager.character_manager.set_images_directory(images_dir)
+
+            # Update manuscript view with new manuscript manager
+            self.manuscript_view.manuscript_manager = self.project_manager.manuscript_structure_manager
 
             # Update character detail view with manager
             self.character_detail_view.set_character_manager(
@@ -970,6 +983,9 @@ class TheNovelistMainWindow(QMainWindow):
             images_dir = self.project_manager.get_temp_images_directory()
             if images_dir:
                 self.project_manager.character_manager.set_images_directory(images_dir)
+
+            # Update manuscript view with new manuscript manager
+            self.manuscript_view.manuscript_manager = self.project_manager.manuscript_structure_manager
 
             # Update character detail view with manager
             self.character_detail_view.set_character_manager(
@@ -2205,6 +2221,28 @@ class TheNovelistMainWindow(QMainWindow):
         """Toggle analysis panels"""
         self.manuscript_view.toggle_analysis_panels()
 
+    def _on_analysis_tab_toggled(self, tab_index: int, visible: bool):
+        """
+        Handle individual analysis tab toggle from menu
+
+        Args:
+            tab_index: Index of tab to toggle (0-5)
+            visible: True to show, False to hide
+        """
+        # Save to settings
+        self.settings.set_analysis_tab_visibility(tab_index, visible)
+
+        # Apply to manuscript view (all tabs 0-5)
+        if hasattr(self.manuscript_view, 'set_analysis_tab_visible'):
+            self.manuscript_view.set_analysis_tab_visible(tab_index, visible)
+
+        # AI tab (index 0) also appears in character and location views
+        if tab_index == 0:
+            if hasattr(self.character_detail_view, 'set_ai_tab_visible'):
+                self.character_detail_view.set_ai_tab_visible(visible)
+            if hasattr(self.location_detail_view, 'set_ai_tab_visible'):
+                self.location_detail_view.set_ai_tab_visible(visible)
+
     def _on_toolbar_group_changed(self, group_name: str, visible: bool):
         """
         Handle toolbar group visibility change from menu
@@ -2232,6 +2270,43 @@ class TheNovelistMainWindow(QMainWindow):
         if hasattr(self.manuscript_view, 'editor'):
             for group_name, visible in groups.items():
                 self.manuscript_view.editor.set_toolbar_group_visibility(group_name, visible)
+
+    def _apply_analysis_tabs_state(self):
+        """Apply analysis tabs visibility state from saved preferences"""
+        # Get saved settings
+        tab_states = self.settings.get_analysis_tabs_visibility()
+
+        # Sync menu bar checkboxes
+        self.menu_bar.sync_analysis_tabs_state(tab_states)
+
+        # Apply to manuscript view (all tabs 0-5)
+        if hasattr(self.manuscript_view, 'set_analysis_tab_visible'):
+            for tab_index, visible in tab_states.items():
+                self.manuscript_view.set_analysis_tab_visible(tab_index, visible)
+
+        # Apply AI tab (index 0) to character and location views
+        ai_tab_visible = tab_states.get(0, True)
+        if hasattr(self.character_detail_view, 'set_ai_tab_visible'):
+            self.character_detail_view.set_ai_tab_visible(ai_tab_visible)
+        if hasattr(self.location_detail_view, 'set_ai_tab_visible'):
+            self.location_detail_view.set_ai_tab_visible(ai_tab_visible)
+
+    def _apply_saved_zoom_level(self):
+        """Apply saved zoom level to all views"""
+        # Get saved zoom level
+        zoom_level = self.settings.get_editor_zoom_level()
+
+        # Update zoom control widget
+        if hasattr(self, 'zoom_control'):
+            self.zoom_control.set_zoom_level(zoom_level)
+
+        # Apply to all views
+        if hasattr(self.manuscript_view, 'set_zoom_level'):
+            self.manuscript_view.set_zoom_level(zoom_level)
+        if hasattr(self.character_detail_view, 'set_zoom_level'):
+            self.character_detail_view.set_zoom_level(zoom_level)
+        if hasattr(self.location_detail_view, 'set_zoom_level'):
+            self.location_detail_view.set_zoom_level(zoom_level)
 
     def _create_backup(self):
         """Create a manual backup of the current project"""

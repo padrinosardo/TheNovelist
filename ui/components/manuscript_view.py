@@ -12,6 +12,7 @@ from ui.components.find_replace_dialog import FindReplaceDialog
 from ui.components.context_sidebar import ContextSidebar
 from ui.components.ai_chat_widget import AIChatWidget
 from typing import Optional
+from utils.logger import logger
 
 
 class ManuscriptView(QWidget):
@@ -76,6 +77,12 @@ class ManuscriptView(QWidget):
         # Text editor widget
         self.editor = TextEditor()
         self.editor.editor.textChanged.connect(self._on_editor_text_changed)
+
+        # Set visual zoom for editor from settings (doesn't modify content)
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        # Use visual zoom - this only affects display, not saved content
+        self.editor.set_visual_zoom_from_font_size(settings.get_editor_font_size())
 
         layout.addWidget(self.editor)
 
@@ -236,6 +243,16 @@ class ManuscriptView(QWidget):
         self.notes_edit.textChanged.connect(self._on_notes_changed)
         self.sidebar.add_tab(self.notes_edit, "Notes", "📝")
 
+        # Store tab indices for visibility management (order matches menu actions)
+        self.analysis_tab_indices = {
+            'ai': 0,           # AI Assistant
+            'grammar': 1,      # Grammar
+            'repetitions': 2,  # Repetitions
+            'style': 3,        # Style
+            'synopsis': 4,     # Synopsis
+            'notes': 5         # Notes
+        }
+
         return self.sidebar
 
     def get_text(self) -> str:
@@ -256,6 +273,15 @@ class ManuscriptView(QWidget):
         """
         cursor = self.editor.editor.textCursor()
         return cursor.selectedText()
+
+    def get_current_content(self) -> str:
+        """
+        Get current content from editor (for AI commands)
+
+        Returns:
+            str: Current manuscript plain text
+        """
+        return self.editor.get_plain_text()
 
     def set_text(self, text: str):
         """
@@ -485,6 +511,47 @@ class ManuscriptView(QWidget):
                 scene.notes = notes
                 # Emit text_changed to trigger save
                 self.text_changed.emit()
+
+    def set_analysis_tab_visible(self, tab_index: int, visible: bool):
+        """
+        Set visibility of a specific analysis tab
+
+        Args:
+            tab_index: Index of tab to show/hide (0-5)
+            visible: True to show, False to hide
+        """
+        if hasattr(self, 'sidebar'):
+            self.sidebar.set_tab_visible(tab_index, visible)
+
+    def zoom_in(self):
+        """Zoom in (increase font size)"""
+        if hasattr(self, 'editor'):
+            self.editor.zoom_in()
+
+    def zoom_out(self):
+        """Zoom out (decrease font size)"""
+        if hasattr(self, 'editor'):
+            self.editor.zoom_out()
+
+    def zoom_reset(self):
+        """Reset zoom to default"""
+        if hasattr(self, 'editor'):
+            self.editor.zoom_reset()
+
+    def set_zoom_level(self, percentage: int):
+        """Set zoom level for editor
+
+        Args:
+            percentage: Zoom level (50-200)
+        """
+        import sys
+        print(f"[DEBUG] ManuscriptView.set_zoom_level called with percentage={percentage}", file=sys.stderr, flush=True)
+        if hasattr(self, 'editor'):
+            print(f"[DEBUG] ManuscriptView: Calling editor.set_zoom_level({percentage})", file=sys.stderr, flush=True)
+            self.editor.set_zoom_level(percentage)
+            print(f"[DEBUG] ManuscriptView: editor.set_zoom_level() completed", file=sys.stderr, flush=True)
+        else:
+            print(f"[DEBUG] ManuscriptView: No editor attribute found!", file=sys.stderr, flush=True)
 
     def update_custom_dictionary(self):
         """
