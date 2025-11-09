@@ -58,12 +58,22 @@ class SettingsManager:
             "window_geometry": None,
             "last_directory": str(Path.home() / "Documents"),
             "preferred_ui_language": "it",  # UI language (separate from project language)
+            "editor_zoom_level": 100,  # Editor zoom level (50-200%)
+            "editor_font_size": 18,  # Font size for text editors (8-72pt)
             "toolbar_groups": {
                 "script": True,  # Superscript/Subscript
                 "smallcaps": True,  # Small Caps
                 "alignment": True,  # Alignment buttons
                 "special_chars": True,  # Quote, dashes, ellipsis
                 "tables": True  # Table buttons
+            },
+            "analysis_tabs_visibility": {
+                0: True,  # AI Assistant
+                1: True,  # Grammar
+                2: True,  # Repetitions
+                3: True,  # Style
+                4: True,  # Synopsis
+                5: True   # Notes
             }
         }
 
@@ -356,3 +366,96 @@ class SettingsManager:
         """
         groups = self.get_toolbar_groups()
         return groups.get(group_name, True)
+
+    # ==================== Analysis Tabs Visibility ====================
+
+    def get_analysis_tabs_visibility(self) -> dict:
+        """
+        Get analysis tabs visibility settings
+
+        Returns:
+            dict: Dictionary with tab indices as keys and bool visibility as values
+                 {0: True, 1: False, 2: True, ...}
+        """
+        default_tabs = {
+            0: True,  # AI Assistant
+            1: True,  # Grammar
+            2: True,  # Repetitions
+            3: True,  # Style
+            4: True,  # Synopsis
+            5: True   # Notes
+        }
+        tabs = self.settings.get("analysis_tabs_visibility", default_tabs)
+
+        # Ensure indices are integers (JSON may have converted them to strings)
+        return {int(k): v for k, v in tabs.items()}
+
+    def set_analysis_tab_visibility(self, tab_index: int, visible: bool):
+        """
+        Set visibility for a specific analysis tab
+
+        Args:
+            tab_index: Tab index (0-5)
+            visible: True to show, False to hide
+        """
+        tabs = self.get_analysis_tabs_visibility()
+        if tab_index in tabs:
+            tabs[tab_index] = visible
+            self.set("analysis_tabs_visibility", tabs)
+
+    def is_analysis_tab_visible(self, tab_index: int) -> bool:
+        """
+        Check if an analysis tab is visible
+
+        Args:
+            tab_index: Tab index (0-5)
+
+        Returns:
+            bool: True if visible, False otherwise
+        """
+        tabs = self.get_analysis_tabs_visibility()
+        return tabs.get(tab_index, True)
+
+    # ==================== Editor Zoom ====================
+
+    def get_editor_zoom_level(self) -> int:
+        """
+        Get editor zoom level
+
+        Returns:
+            int: Zoom level percentage (50-200, default 100)
+        """
+        return self.settings.get("editor_zoom_level", 100)
+
+    def set_editor_zoom_level(self, level: int):
+        """
+        Set editor zoom level
+
+        Args:
+            level: Zoom level percentage (50-200)
+        """
+        # Clamp value between 50 and 200
+        clamped_level = max(50, min(200, level))
+        self.set("editor_zoom_level", clamped_level)
+
+    # ==================== Editor Font Size ====================
+
+    def get_editor_font_size(self) -> int:
+        """
+        Get editor font size
+
+        Returns:
+            int: Font size in points (8-72, default 18)
+        """
+        return self.settings.get("editor_font_size", 18)
+
+    def set_editor_font_size(self, size: int):
+        """
+        Set editor font size
+
+        Args:
+            size: Font size in points (8-72)
+        """
+        # Clamp value between 8 and 72
+        clamped_size = max(8, min(72, size))
+        self.set("editor_font_size", clamped_size)

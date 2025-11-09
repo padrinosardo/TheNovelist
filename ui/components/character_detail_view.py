@@ -142,6 +142,12 @@ class CharacterDetailView(QWidget):
             spell_check_language='it'
         )
         self.description_input.setMinimumHeight(350)  # Increased for toolbar
+
+        # Set visual zoom for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        self.description_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+
         form_layout.addWidget(self.description_input)
 
         # Image gallery
@@ -318,6 +324,26 @@ class CharacterDetailView(QWidget):
             "Saved",
             "Character updated successfully!"
         )
+
+    def set_ai_tab_visible(self, visible: bool):
+        """
+        Set visibility of AI Assistant tab
+
+        Args:
+            visible: True to show, False to hide
+        """
+        if hasattr(self, 'sidebar'):
+            self.sidebar.set_tab_visible(0, visible)  # AI tab is always index 0
+
+    def set_zoom_level(self, percentage: int):
+        """
+        Set zoom level for description editor
+
+        Args:
+            percentage: Zoom level (50-200)
+        """
+        if hasattr(self, 'description_input'):
+            self.description_input.set_zoom_level(percentage)
 
     def _on_delete(self):
         """Handle delete button click"""

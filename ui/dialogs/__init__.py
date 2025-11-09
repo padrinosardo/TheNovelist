@@ -11,6 +11,7 @@ from .ai_settings_dialog import AISettingsDialog
 from .upgrade_dialog import UpgradeDialog
 from .keyboard_shortcuts_dialog import KeyboardShortcutsDialog
 from .insert_table_dialog import InsertTableDialog
+from .font_size_dialog import FontSizeDialog
 
 __all__ = [
     'NewProjectDialog',
@@ -23,4 +24,5 @@ __all__ = [
     'UpgradeDialog',
     'KeyboardShortcutsDialog',
     'InsertTableDialog',
+    'FontSizeDialog',
 ]

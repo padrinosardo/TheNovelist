@@ -121,6 +121,12 @@ class LocationDetailView(QWidget):
             spell_check_language='it'
         )
         self.description_input.setMaximumHeight(250)  # Increased for toolbar
+
+        # Set visual zoom for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        self.description_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+
         layout.addWidget(self.description_input)
 
         # === IMAGES SECTION ===
@@ -193,6 +199,12 @@ class LocationDetailView(QWidget):
             spell_check_language='it'
         )
         self.notes_input.setMaximumHeight(200)  # Increased for toolbar
+
+        # Set visual zoom for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        self.notes_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+
         layout.addWidget(self.notes_input)
 
         # Add stretch
@@ -399,6 +411,28 @@ class LocationDetailView(QWidget):
             # Remove from list widget
             row = self.images_list.row(current_item)
             self.images_list.takeItem(row)
+
+    def set_ai_tab_visible(self, visible: bool):
+        """
+        Set visibility of AI Assistant tab
+
+        Args:
+            visible: True to show, False to hide
+        """
+        if hasattr(self, 'sidebar'):
+            self.sidebar.set_tab_visible(0, visible)  # AI tab is always index 0
+
+    def set_zoom_level(self, percentage: int):
+        """
+        Set zoom level for description and notes editors
+
+        Args:
+            percentage: Zoom level (50-200)
+        """
+        if hasattr(self, 'description_input'):
+            self.description_input.set_zoom_level(percentage)
+        if hasattr(self, 'notes_input'):
+            self.notes_input.set_zoom_level(percentage)
 
     def _on_save_clicked(self):
         """Validate and save location"""

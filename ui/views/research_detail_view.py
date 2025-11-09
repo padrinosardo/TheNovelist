@@ -92,6 +92,14 @@ class ResearchDetailView(QWidget):
                 padding: 5px;
             }
         """)
+
+        # Set font for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        content_font = QFont()
+        content_font.setPointSize(settings.get_editor_font_size())
+        self.content_input.setFont(content_font)
+
         layout.addWidget(self.content_input)
 
         # === SOURCES SECTION ===

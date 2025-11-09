@@ -194,7 +194,7 @@ class WelcomeScreen(QWidget):
         self.new_project_btn.setFixedSize(140, 35)  # 1/4 of original size
         self.new_project_btn.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #757575;
                 color: white;
                 border: none;
                 padding: 8px 15px;
@@ -203,10 +203,10 @@ class WelcomeScreen(QWidget):
                 border-radius: 5px;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #616161;
             }
             QPushButton:pressed {
-                background-color: #3d8b40;
+                background-color: #424242;
             }
         """)
         self.new_project_btn.clicked.connect(self.new_project_requested.emit)
@@ -218,7 +218,7 @@ class WelcomeScreen(QWidget):
         self.open_other_btn.setFixedSize(140, 35)  # 1/4 of original size
         self.open_other_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2196F3;
+                background-color: #757575;
                 color: white;
                 border: none;
                 padding: 8px 15px;
@@ -227,10 +227,10 @@ class WelcomeScreen(QWidget):
                 border-radius: 5px;
             }
             QPushButton:hover {
-                background-color: #1976D2;
+                background-color: #616161;
             }
             QPushButton:pressed {
-                background-color: #0d47a1;
+                background-color: #424242;
             }
         """)
         self.open_other_btn.clicked.connect(self.open_other_requested.emit)

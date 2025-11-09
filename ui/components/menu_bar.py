@@ -44,9 +44,7 @@ class MenuBar(QMenuBar):
     # View menu signals
     toggle_sidebar_requested = Signal()
     toggle_analysis_requested = Signal()
-    zoom_in_requested = Signal()
-    zoom_out_requested = Signal()
-    zoom_reset_requested = Signal()
+    analysis_tab_toggled = Signal(int, bool)  # tab_index, visible
     toolbar_group_changed = Signal(str, bool)  # group_name, visible
 
     # Tools menu signals
@@ -304,14 +302,68 @@ class MenuBar(QMenuBar):
         view_menu.addAction(sidebar_action)
         self.sidebar_action = sidebar_action
 
-        # Toggle Analysis Panels
-        analysis_action = QAction("Toggle &Analysis Panels", self)
-        analysis_action.setShortcut(QKeySequence("Ctrl+P"))
-        analysis_action.setCheckable(True)
-        analysis_action.setChecked(True)
-        analysis_action.triggered.connect(self.toggle_analysis_requested.emit)
-        view_menu.addAction(analysis_action)
-        self.analysis_action = analysis_action
+        # Analysis Panels submenu
+        analysis_menu = view_menu.addMenu("&Analysis Panels")
+
+        # Show/Hide All
+        toggle_all_action = QAction("Show/Hide &All", self)
+        toggle_all_action.setShortcut(QKeySequence("Ctrl+P"))
+        toggle_all_action.setCheckable(True)
+        toggle_all_action.setChecked(True)
+        toggle_all_action.triggered.connect(self.toggle_analysis_requested.emit)
+        analysis_menu.addAction(toggle_all_action)
+        self.analysis_action = toggle_all_action
+
+        analysis_menu.addSeparator()
+
+        # Individual tabs (indices match ManuscriptView tab order)
+        # 0: AI Assistant
+        ai_tab_action = QAction("🤖 &AI Assistant", self)
+        ai_tab_action.setCheckable(True)
+        ai_tab_action.setChecked(True)
+        ai_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(0, checked))
+        analysis_menu.addAction(ai_tab_action)
+        self.ai_tab_action = ai_tab_action
+
+        # 1: Grammar
+        grammar_tab_action = QAction("📖 &Grammar", self)
+        grammar_tab_action.setCheckable(True)
+        grammar_tab_action.setChecked(True)
+        grammar_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(1, checked))
+        analysis_menu.addAction(grammar_tab_action)
+        self.grammar_tab_action = grammar_tab_action
+
+        # 2: Repetitions
+        repetitions_tab_action = QAction("🔄 &Repetitions", self)
+        repetitions_tab_action.setCheckable(True)
+        repetitions_tab_action.setChecked(True)
+        repetitions_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(2, checked))
+        analysis_menu.addAction(repetitions_tab_action)
+        self.repetitions_tab_action = repetitions_tab_action
+
+        # 3: Style
+        style_tab_action = QAction("✍️ &Style", self)
+        style_tab_action.setCheckable(True)
+        style_tab_action.setChecked(True)
+        style_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(3, checked))
+        analysis_menu.addAction(style_tab_action)
+        self.style_tab_action = style_tab_action
+
+        # 4: Synopsis
+        synopsis_tab_action = QAction("📄 S&ynopsis", self)
+        synopsis_tab_action.setCheckable(True)
+        synopsis_tab_action.setChecked(True)
+        synopsis_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(4, checked))
+        analysis_menu.addAction(synopsis_tab_action)
+        self.synopsis_tab_action = synopsis_tab_action
+
+        # 5: Notes
+        notes_tab_action = QAction("📝 &Notes", self)
+        notes_tab_action.setCheckable(True)
+        notes_tab_action.setChecked(True)
+        notes_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(5, checked))
+        analysis_menu.addAction(notes_tab_action)
+        self.notes_tab_action = notes_tab_action
 
         view_menu.addSeparator()
 
@@ -358,25 +410,6 @@ class MenuBar(QMenuBar):
         format_menu.addAction(tables_action)
         self.toolbar_tables_action = tables_action
 
-        view_menu.addSeparator()
-
-        # Zoom In
-        zoom_in_action = QAction("Zoom &In", self)
-        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)
-        zoom_in_action.triggered.connect(self.zoom_in_requested.emit)
-        view_menu.addAction(zoom_in_action)
-
-        # Zoom Out
-        zoom_out_action = QAction("Zoom &Out", self)
-        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)
-        zoom_out_action.triggered.connect(self.zoom_out_requested.emit)
-        view_menu.addAction(zoom_out_action)
-
-        # Reset Zoom
-        zoom_reset_action = QAction("&Reset Zoom", self)
-        zoom_reset_action.setShortcut(QKeySequence("Ctrl+0"))
-        zoom_reset_action.triggered.connect(self.zoom_reset_requested.emit)
-        view_menu.addAction(zoom_reset_action)
 
     def _create_tools_menu(self):
         """Create Tools menu"""
@@ -523,3 +556,24 @@ class MenuBar(QMenuBar):
             self.toolbar_special_chars_action.setChecked(groups.get('special_chars', True))
         if hasattr(self, 'toolbar_tables_action'):
             self.toolbar_tables_action.setChecked(groups.get('tables', True))
+
+    def sync_analysis_tabs_state(self, tab_states: dict):
+        """
+        Sync analysis tab checkboxes with actual tab visibility
+
+        Args:
+            tab_states: Dictionary with tab indices as keys and bool visibility as values
+                       {0: True, 1: False, 2: True, ...}
+        """
+        if hasattr(self, 'ai_tab_action'):
+            self.ai_tab_action.setChecked(tab_states.get(0, True))
+        if hasattr(self, 'grammar_tab_action'):
+            self.grammar_tab_action.setChecked(tab_states.get(1, True))
+        if hasattr(self, 'repetitions_tab_action'):
+            self.repetitions_tab_action.setChecked(tab_states.get(2, True))
+        if hasattr(self, 'style_tab_action'):
+            self.style_tab_action.setChecked(tab_states.get(3, True))
+        if hasattr(self, 'synopsis_tab_action'):
+            self.synopsis_tab_action.setChecked(tab_states.get(4, True))
+        if hasattr(self, 'notes_tab_action'):
+            self.notes_tab_action.setChecked(tab_states.get(5, True))

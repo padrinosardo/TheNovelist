@@ -33,7 +33,7 @@ def warning_handler(message, category, filename, lineno, file=None, line=None):
 warnings.showwarning = warning_handler
 
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QPalette, QColor, QFont
 from PySide6.QtCore import Qt, QEvent
 
 # Import custom modules
@@ -215,6 +215,11 @@ def apply_adaptive_stylesheet(app: QApplication):
 def main():
     """Application entry point"""
     app = QApplication(sys.argv)
+
+    # Set a larger default font for the entire application
+    default_font = QFont()
+    default_font.setPointSize(15)  # Increased from default ~12 to 15
+    app.setFont(default_font)
 
     # Apply adaptive stylesheet that respects system theme
     apply_adaptive_stylesheet(app)

@@ -1060,6 +1060,14 @@ class RichTextEditor(QFrame):
             else:
                 self.editor.setPlainText(text)
 
+        # CRITICAL: Restore zoom after setting text (setHtml/setPlainText reset zoom)
+        if hasattr(self.editor, '_current_zoom_points'):
+            zoom_points = self.editor._current_zoom_points
+            if zoom_points > 0:
+                self.editor.zoomIn(zoom_points)
+            elif zoom_points < 0:
+                self.editor.zoomOut(abs(zoom_points))
+
         if self.show_counter:
             self._update_counter()
 
@@ -1135,6 +1143,15 @@ class RichTextEditor(QFrame):
         try:
             self.clear_highlights()
             self.editor.clear()
+
+            # CRITICAL: Restore zoom after clear (clear resets zoom)
+            if hasattr(self.editor, '_current_zoom_points'):
+                zoom_points = self.editor._current_zoom_points
+                if zoom_points > 0:
+                    self.editor.zoomIn(zoom_points)
+                elif zoom_points < 0:
+                    self.editor.zoomOut(abs(zoom_points))
+
             if self.show_counter:
                 self._update_counter()
         except Exception as e:
@@ -1151,3 +1168,99 @@ class RichTextEditor(QFrame):
         if group_name in self.toolbar_groups:
             for widget in self.toolbar_groups[group_name]:
                 widget.setVisible(visible)
+
+    def set_visual_zoom_from_font_size(self, font_size: int):
+        """
+        Set visual zoom based on font size WITHOUT modifying the actual content
+
+        This is for display purposes only - the text keeps its original formatting
+        when saved/exported, but appears larger on screen for better readability.
+
+        Args:
+            font_size: Desired visual font size in points (8-72)
+        """
+        print(f"[DEBUG] set_visual_zoom_from_font_size called with font_size={font_size}")
+
+        # Base font size is typically 13pt (QTextEdit default)
+        base_size = 13
+
+        # Calculate how many zoom points to apply
+        # If user wants 26pt and base is 13pt, need to zoomIn by 13 points
+        zoom_points = font_size - base_size
+        print(f"[DEBUG] zoom_points calculated: {zoom_points} (base_size={base_size})")
+
+        # First, reset zoom to baseline
+        if hasattr(self.editor, '_current_zoom_points'):
+            # Undo previous zoom
+            print(f"[DEBUG] Resetting from previous zoom: {self.editor._current_zoom_points}")
+            if self.editor._current_zoom_points > 0:
+                self.editor.zoomOut(self.editor._current_zoom_points)
+            elif self.editor._current_zoom_points < 0:
+                self.editor.zoomIn(abs(self.editor._current_zoom_points))
+
+        # Now apply new zoom
+        print(f"[DEBUG] Applying zoom: {zoom_points}")
+        if zoom_points > 0:
+            print(f"[DEBUG] Calling zoomIn({zoom_points})")
+            self.editor.zoomIn(zoom_points)
+        elif zoom_points < 0:
+            print(f"[DEBUG] Calling zoomOut({abs(zoom_points)})")
+            self.editor.zoomOut(abs(zoom_points))
+
+        # Store current zoom level
+        self.editor._current_zoom_points = zoom_points
+        print(f"[DEBUG] Zoom applied successfully. _current_zoom_points={zoom_points}")
+
+        # DEBUG: Check current font size
+        current_font = self.editor.font()
+        print(f"[DEBUG] Current editor font after zoom: {current_font.pointSize()}pt")
+
+    def set_zoom_level(self, percentage: int):
+        """
+        Set zoom level as percentage
+
+        Args:
+            percentage: Zoom level (50-200, where 100 is normal size)
+        """
+        import sys
+        print(f"[DEBUG] RichTextEditor.set_zoom_level called with percentage={percentage}", file=sys.stderr, flush=True)
+
+        # Initialize current zoom if not set
+        if not hasattr(self, '_current_zoom_percentage'):
+            self._current_zoom_percentage = 100
+            print(f"[DEBUG] RichTextEditor: Initialized current zoom to 100%", file=sys.stderr, flush=True)
+
+        # Calculate the difference from current zoom
+        current = self._current_zoom_percentage
+        difference = percentage - current
+
+        print(f"[DEBUG] RichTextEditor: current={current}%, new={percentage}%, difference={difference}%", file=sys.stderr, flush=True)
+
+        # Apply zoom incrementally
+        # zoomIn/Out use points, typically 1 point = 1% change
+        if difference > 0:
+            # Zoom in
+            print(f"[DEBUG] RichTextEditor: Zooming IN by {difference} points", file=sys.stderr, flush=True)
+            self.editor.zoomIn(difference)
+        elif difference < 0:
+            # Zoom out
+            print(f"[DEBUG] RichTextEditor: Zooming OUT by {abs(difference)} points", file=sys.stderr, flush=True)
+            self.editor.zoomOut(abs(difference))
+        else:
+            print(f"[DEBUG] RichTextEditor: No zoom change needed", file=sys.stderr, flush=True)
+
+        # Update current zoom level
+        self._current_zoom_percentage = percentage
+        print(f"[DEBUG] RichTextEditor: Zoom level set to {percentage}%", file=sys.stderr, flush=True)
+
+    def zoom_in(self):
+        """Zoom in (increase font size) - kept for backward compatibility"""
+        self.editor.zoomIn(1)
+
+    def zoom_out(self):
+        """Zoom out (decrease font size) - kept for backward compatibility"""
+        self.editor.zoomOut(1)
+
+    def zoom_reset(self):
+        """Reset zoom to default (100%) - kept for backward compatibility"""
+        self.set_zoom_level(100)

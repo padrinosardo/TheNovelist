@@ -45,7 +45,7 @@ class Stili:
                 border: none;
                 border-radius: 5px;
                 font-weight: bold;
-                font-size: 13px;
+                font-size: 16px;
             }}
             QPushButton:hover {{
                 background-color: {colore_base}dd;
@@ -67,7 +67,7 @@ class Stili:
     @staticmethod
     def gruppo():
         """Stile per QGroupBox"""
-        return "QGroupBox { font-weight: bold; font-size: 14px; }"
+        return "QGroupBox { font-weight: bold; font-size: 17px; }"
 
     @staticmethod
     def progress_bar():

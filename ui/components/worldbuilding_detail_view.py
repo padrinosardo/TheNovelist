@@ -170,6 +170,14 @@ class WorldbuildingDetailView(QWidget):
         )
         self.description_edit.setStyleSheet(self._get_textedit_style())
         self.description_edit.setMinimumHeight(200)
+
+        # Set font for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        editor_font = QFont()
+        editor_font.setPointSize(settings.get_editor_font_size())
+        self.description_edit.setFont(editor_font)
+
         form_layout.addWidget(self.description_edit)
 
         # Rules section
@@ -189,6 +197,14 @@ class WorldbuildingDetailView(QWidget):
         self.notes_edit.setPlaceholderText("Note libere, riflessioni, idee...")
         self.notes_edit.setStyleSheet(self._get_textedit_style())
         self.notes_edit.setMaximumHeight(120)
+
+        # Set font for text content from settings
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        notes_font = QFont()
+        notes_font.setPointSize(settings.get_editor_font_size())
+        self.notes_edit.setFont(notes_font)
+
         form_layout.addWidget(self.notes_edit)
 
         # Action buttons
