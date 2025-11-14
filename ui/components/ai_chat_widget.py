@@ -41,10 +41,23 @@ class AIMessageBubble(QFrame):
         self.text_edit.setReadOnly(True)
         self.text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        # Auto-size height based on content (min 150px = ~5 righe, max 500px)
-        doc_height = self.text_edit.document().size().height()
-        calculated_height = min(max(int(doc_height) + 20, 150), 500)
-        self.text_edit.setFixedHeight(calculated_height)
+        # Calculate proper height based on content
+        # Calculate height based on number of lines
+        line_count = self.message.count('\n') + 1
+
+        # Calculate height: ~25px per line + padding
+        # For long lines that wrap, add extra height
+        avg_chars_per_line = 60  # Average characters that fit in one visual line
+        total_chars = len(self.message)
+        estimated_lines = max(line_count, (total_chars // avg_chars_per_line) + 1)
+
+        calculated_height = estimated_lines * 25 + 20  # 25px per line + 20px padding
+
+        # Min 40px for single short line, max 500px for very long text
+        calculated_height = min(max(calculated_height, 40), 500)
+
+        self.text_edit.setMinimumHeight(calculated_height)
+        self.text_edit.setMaximumHeight(calculated_height)
 
         # Get colors from Qt palette (adapts to system theme)
         from PySide6.QtGui import QPalette
@@ -1061,6 +1074,30 @@ Provide helpful, detailed, and creative suggestions."""
 
             # Build system_prompt based on context type (Scene, Character, etc.)
             system_prompt = None
+
+            # 🆓 BETA: RAG-enhanced context (if available)
+            rag_context = ""
+            if self.project_manager and self.project_manager.knowledge_base:
+                try:
+                    # Search RAG knowledge base for relevant context
+                    rag_results = self.project_manager.knowledge_base.search(
+                        query=prompt,
+                        top_k=3  # Top 3 most relevant results
+                    )
+                    if rag_results:
+                        rag_parts = ["# CONTESTO RILEVANTE DAL PROGETTO\n"]
+                        for i, result in enumerate(rag_results, 1):
+                            doc = result['document']
+                            metadata = result.get('metadata', {})
+                            doc_type = metadata.get('type', 'unknown')
+                            rag_parts.append(f"## Risultato {i} ({doc_type})")
+                            rag_parts.append(doc[:500])  # Limit to 500 chars
+                            rag_parts.append("")
+                        rag_context = "\n".join(rag_parts)
+                except Exception as e:
+                    logger.warning(f"RAG search failed (non-fatal): {e}")
+                    rag_context = ""
+
             if self.context_type == "Scene" and self.current_entity:
                 from managers.ai.context_builder import SceneContextBuilder
                 context_builder = SceneContextBuilder(project)
@@ -1070,7 +1107,9 @@ Provide helpful, detailed, and creative suggestions."""
 
 ---
 
-{context}"""
+{context}
+
+{rag_context}"""
             elif self.context_type == "Character" and self.current_entity:
                 from managers.ai.context_builder import CharacterContextBuilder
                 context_builder = CharacterContextBuilder(project)
@@ -1080,7 +1119,9 @@ Provide helpful, detailed, and creative suggestions."""
 
 ---
 
-{context}"""
+{context}
+
+{rag_context}"""
             elif self.context_type == "Location" and self.current_entity:
                 from managers.ai.context_builder import LocationContextBuilder
                 context_builder = LocationContextBuilder(project)
@@ -1090,7 +1131,9 @@ Provide helpful, detailed, and creative suggestions."""
 
 ---
 
-{context}"""
+{context}
+
+{rag_context}"""
             elif self.context_type == "Note" and self.current_entity:
                 from managers.ai.context_builder import NoteContextBuilder
                 context_builder = NoteContextBuilder(project)
@@ -1100,7 +1143,9 @@ Provide helpful, detailed, and creative suggestions."""
 
 ---
 
-{context}"""
+{context}
+
+{rag_context}"""
 
             # Call AI with context in system_prompt
             response = self._generate_with_provider(provider, messages, system_prompt=system_prompt)

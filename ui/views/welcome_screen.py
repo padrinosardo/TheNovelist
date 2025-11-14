@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QApplication
 )
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QColor, QPalette
+from PySide6.QtGui import QFont, QColor, QPalette, QPixmap
 from datetime import datetime
 from typing import List, Dict
 from models.project_type import ProjectType
@@ -76,17 +76,34 @@ class WelcomeScreen(QWidget):
         layout.setSpacing(15)
 
         # === HEADER ===
-        header_layout = QVBoxLayout()
-        header_layout.setSpacing(5)
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(15)
 
-        # Logo/Title - reduced size
-        title = QLabel("📚 The Novelist")
+        # Logo on the left (discrete, 80x80)
+        logo_label = QLabel()
+        logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                                  'resources', 'logo_welcome.png')
+        if os.path.exists(logo_path):
+            logo_pixmap = QPixmap(logo_path)
+            # Scale to 80x80 for discrete appearance
+            scaled_logo = logo_pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
+                                             Qt.TransformationMode.SmoothTransformation)
+            logo_label.setPixmap(scaled_logo)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        header_layout.addWidget(logo_label)
+
+        # Title and subtitle in vertical layout
+        title_layout = QVBoxLayout()
+        title_layout.setSpacing(5)
+
+        # Title - reduced size, no emoji
+        title = QLabel("The Novelist")
         title_font = QFont()
         title_font.setPointSize(24)  # Reduced from 32
         title_font.setBold(True)
         title.setFont(title_font)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(title)
+        title.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        title_layout.addWidget(title)
 
         # Subtitle - reduced size
         colors = self._get_colors()
@@ -94,9 +111,12 @@ class WelcomeScreen(QWidget):
         subtitle_font = QFont()
         subtitle_font.setPointSize(14)  # Reduced from 16
         subtitle.setFont(subtitle_font)
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignLeft)
         subtitle.setStyleSheet(f"color: {colors['text_secondary']};")
-        header_layout.addWidget(subtitle)
+        title_layout.addWidget(subtitle)
+
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()  # Push everything to the left
 
         layout.addLayout(header_layout)
         layout.addSpacing(10)  # Reduced from 20

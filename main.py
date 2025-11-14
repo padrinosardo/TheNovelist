@@ -216,9 +216,9 @@ def main():
     """Application entry point"""
     app = QApplication(sys.argv)
 
-    # Set a larger default font for the entire application
+    # Set default font size for the entire application
     default_font = QFont()
-    default_font.setPointSize(15)  # Increased from default ~12 to 15
+    default_font.setPointSize(14)  # Standard size for all input fields
     app.setFont(default_font)
 
     # Apply adaptive stylesheet that respects system theme

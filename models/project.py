@@ -66,6 +66,9 @@ class Project:
         'max_tokens': 2000
     })  # Provider-specific configuration
 
+    # OpenAI API Key for Image Generation (DALL-E)
+    openai_image_api_key: str = ""  # Separate OpenAI API key for image generation
+
     # AI Writing Template (Milestone 6)
     ai_writing_template: str = "default"  # Selected template ID for AI writing guide
 

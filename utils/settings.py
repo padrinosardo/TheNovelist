@@ -59,7 +59,7 @@ class SettingsManager:
             "last_directory": str(Path.home() / "Documents"),
             "preferred_ui_language": "it",  # UI language (separate from project language)
             "editor_zoom_level": 100,  # Editor zoom level (50-200%)
-            "editor_font_size": 18,  # Font size for text editors (8-72pt)
+            "editor_font_size": 14,  # Font size for text editors (8-72pt)
             "toolbar_groups": {
                 "script": True,  # Superscript/Subscript
                 "smallcaps": True,  # Small Caps
@@ -445,9 +445,9 @@ class SettingsManager:
         Get editor font size
 
         Returns:
-            int: Font size in points (8-72, default 18)
+            int: Font size in points (8-72, default 14)
         """
-        return self.settings.get("editor_font_size", 18)
+        return self.settings.get("editor_font_size", 14)
 
     def set_editor_font_size(self, size: int):
         """

@@ -68,11 +68,11 @@ class ProjectManager:
     @property
     def knowledge_base(self) -> Optional[KnowledgeBase]:
         """
-        Lazy-loaded RAG Knowledge Base (Premium Feature)
+        Lazy-loaded RAG Knowledge Base
 
-        Returns None if:
-        - Feature not available (free tier)
-        - Initialization failed
+        🆓 BETA: Temporaneamente gratuito per beta tester
+
+        Returns None if initialization failed
 
         Usage:
             if project_manager.knowledge_base:
@@ -84,18 +84,15 @@ class ProjectManager:
         # Try to initialize once
         self._knowledge_base_initialized = True
 
-        # Check if RAG feature is available
-        if not feature_manager.is_available("rag_system"):
-            AppLogger.info("RAG System not available (requires premium tier)")
-            return None
+        # 🆓 BETA: RAG system always available (no premium check)
+        # if not feature_manager.is_available("rag_system"):
+        #     AppLogger.info("RAG System not available (requires premium tier)")
+        #     return None
 
         try:
             self._knowledge_base = KnowledgeBase()
-            AppLogger.info("RAG Knowledge Base initialized successfully")
+            AppLogger.info("🆓 BETA: RAG Knowledge Base initialized (free for beta testers)")
             return self._knowledge_base
-        except FeatureLockedError as e:
-            AppLogger.warning(f"RAG System locked: {e.upgrade_info['name']}")
-            return None
         except Exception as e:
             AppLogger.error(f"Failed to initialize RAG Knowledge Base: {e}")
             return None

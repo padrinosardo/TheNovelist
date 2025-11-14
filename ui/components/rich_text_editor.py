@@ -2,7 +2,7 @@
 Rich Text Editor - Reusable text editor with formatting toolbar and table support
 """
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
-                               QTextEdit, QWidget, QPushButton, QToolButton, QMenu, QApplication)
+                               QTextEdit, QWidget, QPushButton, QToolButton, QMenu, QApplication, QComboBox)
 from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import (QTextCharFormat, QColor, QTextCursor, QFont, QKeySequence, QAction,
                            QPixmap, QPainter, QPen, QIcon, QTextTableFormat, QKeyEvent, QPalette)
@@ -32,6 +32,7 @@ class RichTextEditor(QFrame):
                  enable_spell_check=True,
                  enable_tables=True,
                  spell_check_language='it',
+                 style_manager=None,
                  parent=None):
         """
         Initialize the rich text editor
@@ -43,6 +44,7 @@ class RichTextEditor(QFrame):
             enable_spell_check: Enable spell checking (default: True)
             enable_tables: Enable table functionality (default: True)
             spell_check_language: Spell check language code (default: 'it')
+            style_manager: StyleManager instance for custom styles (default: None)
             parent: Parent widget
         """
         super().__init__(parent)
@@ -53,6 +55,7 @@ class RichTextEditor(QFrame):
         self.enable_spell_check = enable_spell_check
         self.enable_tables = enable_tables
         self.spell_check_language = spell_check_language
+        self.style_manager = style_manager
 
         self.error_highlights = []
         self.grammar_extra_selections = []
@@ -174,6 +177,21 @@ class RichTextEditor(QFrame):
         # ROW 2: Special characters + tables
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(5)
+
+        # Style dropdown (if style_manager is available)
+        if self.style_manager:
+            self.style_combo = QComboBox()
+            self.style_combo.setFixedWidth(140)
+            self.style_combo.setToolTip("Applica Stile")
+            self.style_combo.addItems(self.style_manager.get_all_style_names())
+            self.style_combo.setCurrentText("Normale")
+            self.style_combo.currentTextChanged.connect(self._apply_style)
+            row1_layout.addWidget(self.style_combo)
+
+            # Separator
+            separator_style = QLabel("|")
+            separator_style.setStyleSheet(self._get_separator_style())
+            row1_layout.addWidget(separator_style)
 
         # Bold button
         self.bold_btn = QPushButton("B")
@@ -320,6 +338,29 @@ class RichTextEditor(QFrame):
         self.align_justify_btn.setStyleSheet(self._get_button_style())
         row1_layout.addWidget(self.align_justify_btn)
         self.toolbar_groups['alignment'].append(self.align_justify_btn)
+
+        # Separator for formatting cleanup tools
+        separator_cleanup = QLabel("|")
+        separator_cleanup.setStyleSheet(self._get_separator_style())
+        row1_layout.addWidget(separator_cleanup)
+
+        # Clear formatting button
+        self.clear_format_btn = QPushButton("✖")
+        self.clear_format_btn.setToolTip("Rimuovi Formattazione (Ctrl+Shift+N)")
+        self.clear_format_btn.setShortcut(QKeySequence("Ctrl+Shift+N"))
+        self.clear_format_btn.setFixedSize(32, 28)
+        self.clear_format_btn.clicked.connect(self._clear_formatting)
+        self.clear_format_btn.setStyleSheet(self._get_custom_button_style("#F44336"))
+        row1_layout.addWidget(self.clear_format_btn)
+
+        # Remove indentation button
+        self.remove_indent_btn = QPushButton("◀")
+        self.remove_indent_btn.setToolTip("Rimuovi Indentazioni (Ctrl+Shift+D)")
+        self.remove_indent_btn.setShortcut(QKeySequence("Ctrl+Shift+D"))
+        self.remove_indent_btn.setFixedSize(32, 28)
+        self.remove_indent_btn.clicked.connect(self._remove_indentations)
+        self.remove_indent_btn.setStyleSheet(self._get_custom_button_style("#FF5722"))
+        row1_layout.addWidget(self.remove_indent_btn)
 
         # Spacer before help button (ROW 1)
         row1_layout.addStretch()
@@ -1085,6 +1126,12 @@ class RichTextEditor(QFrame):
         if obj == self.editor and event.type() == QEvent.Type.KeyPress:
             key_event = event
 
+            # Handle Ctrl+Shift+V for paste as plain text
+            if (key_event.key() == Qt.Key.Key_V and
+                key_event.modifiers() == (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier)):
+                self._paste_plain_text()
+                return True
+
             # Handle TAB and Shift+TAB in tables
             if key_event.key() == Qt.Key.Key_Tab or key_event.key() == Qt.Key.Key_Backtab:
                 cursor = self.editor.textCursor()
@@ -1137,6 +1184,106 @@ class RichTextEditor(QFrame):
 
         # Let the event propagate
         return super().eventFilter(obj, event)
+
+    def _paste_plain_text(self):
+        """Paste clipboard content as plain text (without formatting)"""
+        clipboard = QApplication.clipboard()
+        plain_text = clipboard.text()
+
+        if plain_text:
+            cursor = self.editor.textCursor()
+            cursor.insertText(plain_text)
+
+    def _clear_formatting(self):
+        """Remove all formatting from selected text (or entire document if nothing selected)"""
+        cursor = self.editor.textCursor()
+
+        # If no selection, select all
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.Document)
+
+        # Get plain text of selection
+        plain_text = cursor.selectedText()
+
+        # Replace with plain text (removes all formatting)
+        cursor.insertText(plain_text)
+
+    def _remove_indentations(self):
+        """Remove leading spaces and tabs from all lines"""
+        cursor = self.editor.textCursor()
+
+        # If no selection, work on entire document
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.Document)
+
+        # Get selected text
+        text = cursor.selectedText()
+
+        # Split by paragraph separator (Qt uses U+2029)
+        lines = text.split('\u2029')
+
+        # Remove leading whitespace from each line
+        cleaned_lines = [line.lstrip(' \t') for line in lines]
+
+        # Join back with paragraph separator
+        cleaned_text = '\u2029'.join(cleaned_lines)
+
+        # Replace selection with cleaned text
+        cursor.insertText(cleaned_text)
+
+    def _apply_style(self, style_name: str):
+        """
+        Apply a text style to the current selection or paragraph
+
+        Args:
+            style_name: Name of the style to apply
+        """
+        if not self.style_manager:
+            return
+
+        style = self.style_manager.get_style(style_name)
+        if not style:
+            return
+
+        cursor = self.editor.textCursor()
+
+        # If no selection, select the entire paragraph/block
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
+
+        # Apply character formatting
+        from utils.settings import SettingsManager
+        settings = SettingsManager()
+        base_font_size = settings.get_editor_font_size()
+
+        char_format = style.to_text_char_format(base_font_size)
+        cursor.mergeCharFormat(char_format)
+
+        # Apply paragraph formatting (alignment, indents)
+        block_format = cursor.blockFormat()
+        block_format.setAlignment(style.get_alignment_flag())
+        block_format.setLeftMargin(style.left_indent)
+        block_format.setRightMargin(style.right_indent)
+        block_format.setLineHeight(style.line_spacing, 1)  # 1 = ProportionalHeight
+        cursor.setBlockFormat(block_format)
+
+        # Update cursor
+        self.editor.setTextCursor(cursor)
+
+    def set_style_manager(self, style_manager):
+        """
+        Set or update the style manager
+
+        Args:
+            style_manager: StyleManager instance
+        """
+        self.style_manager = style_manager
+
+        # Update combo box if it exists
+        if hasattr(self, 'style_combo') and style_manager:
+            self.style_combo.clear()
+            self.style_combo.addItems(style_manager.get_all_style_names())
+            self.style_combo.setCurrentText("Normale")
 
     def clear(self):
         """Clear the editor"""

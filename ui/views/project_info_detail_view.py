@@ -627,6 +627,30 @@ class ProjectInfoDetailView(QWidget):
         self.ai_config_widget = AIConfigWidget(self.ai_manager)
         layout.addWidget(self.ai_config_widget)
 
+        # OpenAI Image Generation API Key (separate from main provider)
+        layout.addSpacing(10)
+        openai_image_label = QLabel("🎨 OpenAI Image Generation (DALL-E)")
+        openai_image_label.setFont(QFont("Arial", 11, QFont.Weight.Bold))
+        layout.addWidget(openai_image_label)
+
+        openai_image_desc = QLabel(
+            "Chiave API OpenAI separata per la generazione di immagini con DALL-E. "
+            "Puoi usare un provider AI diverso (es. Claude) per il testo e OpenAI solo per le immagini."
+        )
+        openai_image_desc.setWordWrap(True)
+        openai_image_desc.setStyleSheet("color: #666; font-size: 10px; padding: 3px 0;")
+        layout.addWidget(openai_image_desc)
+
+        openai_image_form = QFormLayout()
+        openai_image_form.setSpacing(8)
+
+        self.openai_image_key_input = QLineEdit()
+        self.openai_image_key_input.setPlaceholderText("sk-proj-...")
+        self.openai_image_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        openai_image_form.addRow("API Key:", self.openai_image_key_input)
+
+        layout.addLayout(openai_image_form)
+
         # === PROJECT DATES (Read-Only) ===
         layout.addSpacing(10)
         dates_separator = QFrame()
@@ -781,6 +805,10 @@ class ProjectInfoDetailView(QWidget):
         # Load AI Provider Configuration
         self.ai_config_widget.set_config(project.ai_provider_name, project.ai_provider_config)
 
+        # Load OpenAI Image API Key
+        if hasattr(project, 'openai_image_api_key'):
+            self.openai_image_key_input.setText(project.openai_image_api_key)
+
     def _update_project_type_combo_labels(self, language: str):
         """
         Update project type combo box labels based on language
@@ -879,7 +907,9 @@ class ProjectInfoDetailView(QWidget):
             ai_commands=self._current_project.ai_commands,
             # AI Provider Configuration
             ai_provider_name=self.ai_config_widget.get_provider_name(),
-            ai_provider_config=self.ai_config_widget.get_config()
+            ai_provider_config=self.ai_config_widget.get_config(),
+            # OpenAI Image Generation API Key
+            openai_image_api_key=self.openai_image_key_input.text().strip()
         )
 
         return updated_project

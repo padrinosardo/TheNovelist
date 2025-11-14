@@ -601,6 +601,10 @@ class AIConfigWidget(QWidget):
             self.provider_combo.setCurrentIndex(index)
         self.provider_combo.blockSignals(False)
 
+        # IMPORTANT: Update provider fields manually since signals were blocked
+        # This ensures model combo is populated with correct models for the provider
+        self._update_provider_fields()
+
         # Determine which API key to show
         project_api_key = project_config.get('api_key', '').strip()
         global_api_key = global_config.get('api_key', '').strip()
@@ -624,6 +628,11 @@ class AIConfigWidget(QWidget):
             model_index = self.model_combo.findData(model)
             if model_index >= 0:
                 self.model_combo.setCurrentIndex(model_index)
+            else:
+                # Model not found in the list (e.g., wrong provider model)
+                # Select the first model as default
+                if self.model_combo.count() > 0:
+                    self.model_combo.setCurrentIndex(0)
 
         # Update status indicator
         self._update_api_key_status()
