@@ -46,6 +46,9 @@ class MenuBar(QMenuBar):
     toggle_analysis_requested = Signal()
     analysis_tab_toggled = Signal(int, bool)  # tab_index, visible
     toolbar_group_changed = Signal(str, bool)  # group_name, visible
+    zoom_in_requested = Signal()
+    zoom_out_requested = Signal()
+    zoom_reset_requested = Signal()
 
     # Tools menu signals
     grammar_check_requested = Signal()
@@ -364,6 +367,30 @@ class MenuBar(QMenuBar):
         notes_tab_action.toggled.connect(lambda checked: self.analysis_tab_toggled.emit(5, checked))
         analysis_menu.addAction(notes_tab_action)
         self.notes_tab_action = notes_tab_action
+
+        view_menu.addSeparator()
+
+        # Zoom controls
+        zoom_in_action = QAction("Zoom &In", self)
+        zoom_in_action.setShortcut(QKeySequence.StandardKey.ZoomIn)  # Cmd+Plus on macOS
+        zoom_in_action.setStatusTip("Increase text size")
+        zoom_in_action.triggered.connect(self.zoom_in_requested.emit)
+        view_menu.addAction(zoom_in_action)
+        self.zoom_in_action = zoom_in_action
+
+        zoom_out_action = QAction("Zoom &Out", self)
+        zoom_out_action.setShortcut(QKeySequence.StandardKey.ZoomOut)  # Cmd+Minus on macOS
+        zoom_out_action.setStatusTip("Decrease text size")
+        zoom_out_action.triggered.connect(self.zoom_out_requested.emit)
+        view_menu.addAction(zoom_out_action)
+        self.zoom_out_action = zoom_out_action
+
+        zoom_reset_action = QAction("&Reset Zoom", self)
+        zoom_reset_action.setShortcut(QKeySequence("Ctrl+0"))  # Cmd+0 on macOS
+        zoom_reset_action.setStatusTip("Reset text size to default")
+        zoom_reset_action.triggered.connect(self.zoom_reset_requested.emit)
+        view_menu.addAction(zoom_reset_action)
+        self.zoom_reset_action = zoom_reset_action
 
         view_menu.addSeparator()
 

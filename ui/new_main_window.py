@@ -45,6 +45,11 @@ class TheNovelistMainWindow(QMainWindow):
         # Settings
         self.settings = SettingsManager()
 
+        # Initialize ZoomManager with settings
+        from utils.zoom_manager import ZoomManager
+        self.zoom_manager = ZoomManager.instance()
+        self.zoom_manager.set_settings(self.settings)
+
         # Project management
         self.project_manager = ProjectManager()
         self.is_modified = False
@@ -262,6 +267,9 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.toggle_analysis_requested.connect(self._toggle_analysis)
         self.menu_bar.analysis_tab_toggled.connect(self._on_analysis_tab_toggled)
         self.menu_bar.toolbar_group_changed.connect(self._on_toolbar_group_changed)
+        self.menu_bar.zoom_in_requested.connect(self._on_zoom_in)
+        self.menu_bar.zoom_out_requested.connect(self._on_zoom_out)
+        self.menu_bar.zoom_reset_requested.connect(self._on_zoom_reset)
 
         # Tools menu
         self.menu_bar.grammar_check_requested.connect(self.analyze_grammar)
@@ -440,8 +448,7 @@ class TheNovelistMainWindow(QMainWindow):
             # Apply analysis tabs visibility settings
             self._apply_analysis_tabs_state()
 
-            # Apply saved zoom level
-            self._apply_saved_zoom_level()
+            # REMOVED: _apply_saved_zoom_level() - ZoomManager handles this automatically
         else:
             self.project_tree.clear_project()
 
@@ -2300,6 +2307,27 @@ class TheNovelistMainWindow(QMainWindow):
         if hasattr(self.manuscript_view, 'editor'):
             self.manuscript_view.editor.set_toolbar_group_visibility(group_name, visible)
 
+    def _on_zoom_in(self):
+        """Increase zoom level"""
+        import sys
+        print(f"[DEBUG] MainWindow._on_zoom_in: Called!", file=sys.stderr, flush=True)
+        self.zoom_manager.zoom_in(10)
+        print(f"[DEBUG] MainWindow._on_zoom_in: Completed", file=sys.stderr, flush=True)
+
+    def _on_zoom_out(self):
+        """Decrease zoom level"""
+        import sys
+        print(f"[DEBUG] MainWindow._on_zoom_out: Called!", file=sys.stderr, flush=True)
+        self.zoom_manager.zoom_out(10)
+        print(f"[DEBUG] MainWindow._on_zoom_out: Completed", file=sys.stderr, flush=True)
+
+    def _on_zoom_reset(self):
+        """Reset zoom to default (100%)"""
+        import sys
+        print(f"[DEBUG] MainWindow._on_zoom_reset: Called!", file=sys.stderr, flush=True)
+        self.zoom_manager.reset_zoom()
+        print(f"[DEBUG] MainWindow._on_zoom_reset: Completed", file=sys.stderr, flush=True)
+
     def _apply_toolbar_groups_settings(self):
         """Apply toolbar groups settings from saved preferences"""
         # Get saved settings
@@ -2333,22 +2361,7 @@ class TheNovelistMainWindow(QMainWindow):
         if hasattr(self.location_detail_view, 'set_ai_tab_visible'):
             self.location_detail_view.set_ai_tab_visible(ai_tab_visible)
 
-    def _apply_saved_zoom_level(self):
-        """Apply saved zoom level to all views"""
-        # Get saved zoom level
-        zoom_level = self.settings.get_editor_zoom_level()
-
-        # Update zoom control widget
-        if hasattr(self, 'zoom_control'):
-            self.zoom_control.set_zoom_level(zoom_level)
-
-        # Apply to all views
-        if hasattr(self.manuscript_view, 'set_zoom_level'):
-            self.manuscript_view.set_zoom_level(zoom_level)
-        if hasattr(self.character_detail_view, 'set_zoom_level'):
-            self.character_detail_view.set_zoom_level(zoom_level)
-        if hasattr(self.location_detail_view, 'set_zoom_level'):
-            self.location_detail_view.set_zoom_level(zoom_level)
+    # REMOVED: _apply_saved_zoom_level() - ZoomManager handles zoom automatically via registered editors
 
     def _create_backup(self):
         """Create a manual backup of the current project"""

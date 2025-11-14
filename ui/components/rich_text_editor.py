@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, Signal, QEvent
 from PySide6.QtGui import (QTextCharFormat, QColor, QTextCursor, QFont, QKeySequence, QAction,
                            QPixmap, QPainter, QPen, QIcon, QTextTableFormat, QKeyEvent, QPalette)
+from ui.components.unified_text_editor import UnifiedTextEditor
 
 
 class RichTextEditor(QFrame):
@@ -117,9 +118,9 @@ class RichTextEditor(QFrame):
                 self.editor = SpellCheckTextEdit()
                 self.editor.enable_spell_checking(self.spell_check_language)
             except ImportError:
-                self.editor = QTextEdit()
+                self.editor = UnifiedTextEditor()
         else:
-            self.editor = QTextEdit()
+            self.editor = UnifiedTextEditor()
 
         self.editor.setPlaceholderText(
             "Start writing your text here...\n\n"
@@ -1097,17 +1098,21 @@ class RichTextEditor(QFrame):
             )
 
             if is_html:
+                # CRITICAL FIX: Remove inline font-size to allow Qt zoom to work
+                # Inline CSS font-size overrides Qt's zoom, blocking zoomIn()/zoomOut()
+                import re
+                # Remove font-size from style attributes (e.g., style="font-size: 13px; color: red")
+                text = re.sub(r'font-size:\s*\d+(?:\.\d+)?(?:px|pt|em|rem|%);?\s*', '', text)
+                # Clean up empty style attributes
+                text = re.sub(r'style="\s*"', '', text)
+                text = re.sub(r"style='\s*'", '', text)
+
                 self.editor.setHtml(text)
             else:
                 self.editor.setPlainText(text)
 
-        # CRITICAL: Restore zoom after setting text (setHtml/setPlainText reset zoom)
-        if hasattr(self.editor, '_current_zoom_points'):
-            zoom_points = self.editor._current_zoom_points
-            if zoom_points > 0:
-                self.editor.zoomIn(zoom_points)
-            elif zoom_points < 0:
-                self.editor.zoomOut(abs(zoom_points))
+        # NOTE: Zoom is now preserved automatically by UnifiedTextEditor.setHtml/setPlainText override
+        # No need to manually restore zoom here
 
         if self.show_counter:
             self._update_counter()

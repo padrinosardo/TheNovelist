@@ -14,6 +14,7 @@ from models.character import Character
 from models.location import Location
 from ui.components.context_sidebar import ContextSidebar, CollapsibleSidebarContainer
 from ui.components.ai_chat_widget import AIChatWidget
+from ui.components.unified_text_editor import UnifiedTextEditor
 
 
 class NoteDetailDialog(QDialog):
@@ -135,7 +136,7 @@ class NoteDetailDialog(QDialog):
         content_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         scroll_layout.addWidget(content_label)
 
-        self.content_input = QTextEdit()
+        self.content_input = UnifiedTextEditor()
         self.content_input.setPlaceholderText("Write your note here...")
         self.content_input.setMinimumHeight(200)
         self.content_input.setStyleSheet("""

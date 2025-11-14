@@ -4,12 +4,13 @@ Source Detail Dialog - Edit/create source citations
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel,
     QLineEdit, QTextEdit, QComboBox, QPushButton, QMessageBox,
-    QScrollArea, QFrame, QGroupBox
+    QScrollArea, QFrame, QGroupBox, QWidget
 )
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
 from typing import Optional
 from models.source import Source
+from ui.components.unified_text_editor import UnifiedTextEditor
 
 
 class SourceDetailDialog(QDialog):
@@ -111,7 +112,7 @@ class SourceDetailDialog(QDialog):
         notes_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         scroll_layout.addWidget(notes_label)
 
-        self.notes_input = QTextEdit()
+        self.notes_input = UnifiedTextEditor()
         self.notes_input.setPlaceholderText("Additional notes about this source...")
         self.notes_input.setMaximumHeight(100)
         self.notes_input.setStyleSheet("""

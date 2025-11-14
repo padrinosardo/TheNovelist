@@ -12,6 +12,7 @@ from typing import List, Optional
 from models.timeline_event import TimelineEvent
 from models.character import Character
 from models.location import Location
+from ui.components.unified_text_editor import UnifiedTextEditor
 
 
 class TimelineEventDialog(QDialog):
@@ -71,7 +72,7 @@ class TimelineEventDialog(QDialog):
         desc_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         scroll_layout.addWidget(desc_label)
 
-        self.description_input = QTextEdit()
+        self.description_input = UnifiedTextEditor()
         self.description_input.setPlaceholderText("Describe what happens in this event...")
         self.description_input.setMaximumHeight(150)
         self.description_input.setStyleSheet("""
@@ -132,7 +133,7 @@ class TimelineEventDialog(QDialog):
         notes_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         scroll_layout.addWidget(notes_label)
 
-        self.notes_input = QTextEdit()
+        self.notes_input = UnifiedTextEditor()
         self.notes_input.setPlaceholderText("Additional notes...")
         self.notes_input.setMaximumHeight(100)
         self.notes_input.setStyleSheet("""

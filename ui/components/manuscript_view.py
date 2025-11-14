@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QTextCursor
 from ui.components.rich_text_editor import RichTextEditor as TextEditor
+from ui.components.unified_text_editor import UnifiedTextEditor
 from ui.pannels import ResultsPanel
 from ui.styles import Stili
 from ui.components.find_replace_dialog import FindReplaceDialog
@@ -78,11 +79,9 @@ class ManuscriptView(QWidget):
         self.editor = TextEditor()
         self.editor.editor.textChanged.connect(self._on_editor_text_changed)
 
-        # Set visual zoom for editor from settings (doesn't modify content)
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        # Use visual zoom - this only affects display, not saved content
-        self.editor.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+        # ZOOM: No longer needed - editor uses ZoomManager automatically
+        # The internal editor (SpellCheckTextEdit/UnifiedTextEditor) registers
+        # itself with ZoomManager during __init__ and responds to global zoom commands
 
         layout.addWidget(self.editor)
 
@@ -232,13 +231,13 @@ class ManuscriptView(QWidget):
         self.sidebar.add_tab(self.style_panel, "Style", "✍️")
 
         # Synopsis panel
-        self.synopsis_edit = QTextEdit()
+        self.synopsis_edit = UnifiedTextEditor()
         self.synopsis_edit.setPlaceholderText("Write a synopsis or summary of this scene...")
         self.synopsis_edit.textChanged.connect(self._on_synopsis_changed)
         self.sidebar.add_tab(self.synopsis_edit, "Synopsis", "📄")
 
         # Notes panel
-        self.notes_edit = QTextEdit()
+        self.notes_edit = UnifiedTextEditor()
         self.notes_edit.setPlaceholderText("Write notes about this scene...")
         self.notes_edit.textChanged.connect(self._on_notes_changed)
         self.sidebar.add_tab(self.notes_edit, "Notes", "📝")
@@ -538,20 +537,7 @@ class ManuscriptView(QWidget):
         if hasattr(self, 'editor'):
             self.editor.zoom_reset()
 
-    def set_zoom_level(self, percentage: int):
-        """Set zoom level for editor
-
-        Args:
-            percentage: Zoom level (50-200)
-        """
-        import sys
-        print(f"[DEBUG] ManuscriptView.set_zoom_level called with percentage={percentage}", file=sys.stderr, flush=True)
-        if hasattr(self, 'editor'):
-            print(f"[DEBUG] ManuscriptView: Calling editor.set_zoom_level({percentage})", file=sys.stderr, flush=True)
-            self.editor.set_zoom_level(percentage)
-            print(f"[DEBUG] ManuscriptView: editor.set_zoom_level() completed", file=sys.stderr, flush=True)
-        else:
-            print(f"[DEBUG] ManuscriptView: No editor attribute found!", file=sys.stderr, flush=True)
+    # REMOVED: set_zoom_level() - ZoomManager handles zoom automatically via registered editors
 
     def update_custom_dictionary(self):
         """

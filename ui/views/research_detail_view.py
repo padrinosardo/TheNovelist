@@ -10,6 +10,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
 from typing import List, Optional
 from models.research_note import ResearchNote
+from ui.components.unified_text_editor import UnifiedTextEditor
 
 
 class ResearchDetailView(QWidget):
@@ -80,7 +81,7 @@ class ResearchDetailView(QWidget):
         content_label.setFont(QFont("Arial", 10, QFont.Weight.Bold))
         layout.addWidget(content_label)
 
-        self.content_input = QTextEdit()
+        self.content_input = UnifiedTextEditor()
         self.content_input.setPlaceholderText("Write your research notes here...")
         self.content_input.setMinimumHeight(200)
         self.content_input.setStyleSheet("""
@@ -92,13 +93,6 @@ class ResearchDetailView(QWidget):
                 padding: 5px;
             }
         """)
-
-        # Set font for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        content_font = QFont()
-        content_font.setPointSize(settings.get_editor_font_size())
-        self.content_input.setFont(content_font)
 
         layout.addWidget(self.content_input)
 

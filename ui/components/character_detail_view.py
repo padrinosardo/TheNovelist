@@ -145,10 +145,9 @@ class CharacterDetailView(QWidget):
         )
         self.description_input.setMinimumHeight(350)  # Increased for toolbar
 
-        # Set visual zoom for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        self.description_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+        # ZOOM: No longer needed - editor uses ZoomManager automatically
+        # The internal editor (SpellCheckTextEdit/UnifiedTextEditor) registers
+        # itself with ZoomManager during __init__
 
         form_layout.addWidget(self.description_input)
 

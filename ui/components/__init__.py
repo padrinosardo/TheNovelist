@@ -23,6 +23,8 @@ from .spell_check_highlighter import SpellCheckHighlighter
 from .spell_check_text_edit import SpellCheckTextEdit
 from .ai_config_widget import AIConfigWidget
 from .rich_text_editor import RichTextEditor
+from .unified_text_editor import (UnifiedTextEditor, UnifiedPlainTextEditor,
+                                   UnifiedRichTextEditor)
 
 __all__ = [
     'MenuBar',
@@ -47,5 +49,8 @@ __all__ = [
     'SpellCheckHighlighter',
     'SpellCheckTextEdit',
     'AIConfigWidget',
-    'RichTextEditor'
+    'RichTextEditor',
+    'UnifiedTextEditor',
+    'UnifiedPlainTextEditor',
+    'UnifiedRichTextEditor'
 ]

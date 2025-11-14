@@ -10,6 +10,7 @@ from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
 from models.worldbuilding_entry import WorldbuildingEntry, WorldbuildingCategory
 from models.container_type import ContainerType
+from ui.components.unified_text_editor import UnifiedTextEditor
 from datetime import datetime
 import uuid
 
@@ -160,7 +161,7 @@ class WorldbuildingDetailView(QWidget):
         desc_hint.setStyleSheet("font-size: 12px; margin-bottom: 5px;")
         form_layout.addWidget(desc_hint)
 
-        self.description_edit = QTextEdit()
+        self.description_edit = UnifiedTextEditor()
         self.description_edit.setPlaceholderText(
             "Esempio per Sistema Magico:\n"
             "- Come funziona la magia in questo mondo\n"
@@ -170,13 +171,6 @@ class WorldbuildingDetailView(QWidget):
         )
         self.description_edit.setStyleSheet(self._get_textedit_style())
         self.description_edit.setMinimumHeight(200)
-
-        # Set font for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        editor_font = QFont()
-        editor_font.setPointSize(settings.get_editor_font_size())
-        self.description_edit.setFont(editor_font)
 
         form_layout.addWidget(self.description_edit)
 
@@ -193,17 +187,10 @@ class WorldbuildingDetailView(QWidget):
         notes_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         form_layout.addWidget(notes_label)
 
-        self.notes_edit = QTextEdit()
+        self.notes_edit = UnifiedTextEditor()
         self.notes_edit.setPlaceholderText("Note libere, riflessioni, idee...")
         self.notes_edit.setStyleSheet(self._get_textedit_style())
         self.notes_edit.setMaximumHeight(120)
-
-        # Set font for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        notes_font = QFont()
-        notes_font.setPointSize(settings.get_editor_font_size())
-        self.notes_edit.setFont(notes_font)
 
         form_layout.addWidget(self.notes_edit)
 

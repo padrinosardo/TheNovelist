@@ -124,10 +124,7 @@ class LocationDetailView(QWidget):
         )
         self.description_input.setMaximumHeight(250)  # Increased for toolbar
 
-        # Set visual zoom for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        self.description_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+        # ZOOM: No longer needed - editor uses ZoomManager automatically
 
         layout.addWidget(self.description_input)
 
@@ -253,10 +250,7 @@ class LocationDetailView(QWidget):
         )
         self.notes_input.setMaximumHeight(200)  # Increased for toolbar
 
-        # Set visual zoom for text content from settings
-        from utils.settings import SettingsManager
-        settings = SettingsManager()
-        self.notes_input.set_visual_zoom_from_font_size(settings.get_editor_font_size())
+        # ZOOM: No longer needed - editor uses ZoomManager automatically
 
         layout.addWidget(self.notes_input)
 

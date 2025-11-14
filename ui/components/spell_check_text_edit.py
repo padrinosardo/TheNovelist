@@ -1,14 +1,15 @@
 """
-Spell Check Text Edit - QTextEdit with spell checking context menu
+Spell Check Text Edit - UnifiedTextEditor with spell checking context menu
 """
-from PySide6.QtWidgets import QTextEdit, QMenu
+from PySide6.QtWidgets import QMenu
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QTextCursor, QAction, QContextMenuEvent, QMouseEvent, QTextCharFormat, QColor
 from spellchecker import SpellChecker
+from ui.components.unified_text_editor import UnifiedTextEditor
 import re
 
 
-class SpellCheckTextEdit(QTextEdit):
+class SpellCheckTextEdit(UnifiedTextEditor):
     """
     QTextEdit with integrated spell checking and context menu for suggestions
     Uses ExtraSelections instead of QSyntaxHighlighter to preserve user formatting
@@ -17,8 +18,8 @@ class SpellCheckTextEdit(QTextEdit):
     # Signal emitted when a word is added to the custom dictionary
     word_added_to_dictionary = Signal(str)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, auto_register: bool = True):
+        super().__init__(parent, auto_register=auto_register)
 
         # Initialize spell checker (no highlighter - we use ExtraSelections)
         self.spell_checker = SpellChecker(language='it')
