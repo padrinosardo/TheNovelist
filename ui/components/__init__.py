@@ -13,6 +13,7 @@ from .scene_management_dialogs import (ChapterDialog, SceneDialog,
                                        show_delete_chapter_confirmation,
                                        show_delete_scene_confirmation)
 from .quick_scene_dialog import QuickSceneDialog
+from .parts_preview_widget import PartsPreviewWidget
 from .chapters_preview_widget import ChaptersPreviewWidget
 from .scenes_preview_widget import ScenesPreviewWidget
 from .chapter_detail_widget import ChapterDetailWidget
@@ -37,6 +38,7 @@ __all__ = [
     'show_delete_chapter_confirmation',
     'show_delete_scene_confirmation',
     'QuickSceneDialog',
+    'PartsPreviewWidget',
     'ChaptersPreviewWidget',
     'ScenesPreviewWidget',
     'ChapterDetailWidget',

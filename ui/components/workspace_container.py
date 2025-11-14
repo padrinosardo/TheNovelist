@@ -18,6 +18,7 @@ class WorkspaceContainer(QStackedWidget):
 
     # View constants
     VIEW_MANUSCRIPT = "manuscript"
+    VIEW_PARTS_PREVIEW = "parts_preview"
     VIEW_CHAPTERS_PREVIEW = "chapters_preview"
     VIEW_SCENES_PREVIEW = "scenes_preview"
     VIEW_CHAPTER_DETAIL = "chapter_detail"

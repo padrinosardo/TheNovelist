@@ -14,6 +14,8 @@ from models.character import Character
 from ui.components.context_sidebar import ContextSidebar, CollapsibleSidebarContainer
 from ui.components.ai_chat_widget import AIChatWidget
 from ui.components.rich_text_editor import RichTextEditor
+from ui.dialogs.image_generation_dialog import ImageGenerationDialog
+from pathlib import Path
 import os
 
 
@@ -149,12 +151,63 @@ class LocationDetailView(QWidget):
         images_btn_layout.setSpacing(10)
 
         self.add_image_btn = QPushButton("Add Image")
+        self.add_image_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                font-weight: bold;
+                padding: 8px 15px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
+            }
+        """)
         self.add_image_btn.clicked.connect(self._add_image)
         images_btn_layout.addWidget(self.add_image_btn)
 
         self.remove_image_btn = QPushButton("Remove Selected")
+        self.remove_image_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                font-weight: bold;
+                padding: 8px 15px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
+            }
+        """)
         self.remove_image_btn.clicked.connect(self._remove_image)
         images_btn_layout.addWidget(self.remove_image_btn)
+
+        # AI Image Generation button
+        self.generate_image_btn = QPushButton("🎨 Genera Immagine AI")
+        self.generate_image_btn.setToolTip("Genera un'immagine del luogo usando AI")
+        self.generate_image_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                font-weight: bold;
+                padding: 8px 15px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
+            }
+        """)
+        self.generate_image_btn.clicked.connect(self._on_generate_image)
+        images_btn_layout.addWidget(self.generate_image_btn)
 
         images_btn_layout.addStretch()
         layout.addLayout(images_btn_layout)
@@ -490,3 +543,85 @@ class LocationDetailView(QWidget):
 
         # Emit save signal
         self.save_requested.emit(location)
+
+    def _on_generate_image(self):
+        """
+        Open AI image generation dialog for location
+        """
+        if not self._current_location:
+            QMessageBox.warning(
+                self,
+                "Nessun Luogo Selezionato",
+                "Salva il luogo prima di generare un'immagine."
+            )
+            return
+
+        # Get OpenAI API key from project
+        api_key = None
+        if self.project_manager and self.project_manager.current_project:
+            project = self.project_manager.current_project
+
+            # Check for dedicated OpenAI image generation key first
+            if hasattr(project, 'openai_image_api_key') and project.openai_image_api_key:
+                api_key = project.openai_image_api_key
+            # Fallback to main provider if it's OpenAI
+            elif project.ai_provider_name == "openai" and project.ai_provider_config:
+                api_key = project.ai_provider_config.get("api_key")
+
+        if not api_key:
+            QMessageBox.warning(
+                self,
+                "API Key OpenAI Mancante",
+                "Per generare immagini con DALL-E è necessaria una chiave API OpenAI.\n\n"
+                "Configura la chiave in:\n"
+                "Progetto → Info Progetto → OpenAI Image API Key\n\n"
+                "(Separata dal provider AI principale)"
+            )
+            return
+
+        # Get location data
+        location_name = self._current_location.name
+        location_type = self._current_location.location_type or ""
+
+        # Create save directory
+        project_dir = Path(self.project_manager.current_filepath).parent
+        save_dir = project_dir / "images" / "locations" / location_name.replace(" ", "_")
+
+        # Open dialog
+        # NOTA: L'utente inserirà manualmente la descrizione nel dialog
+        dialog = ImageGenerationDialog(
+            api_key=api_key,
+            entity_type="location",
+            entity_name=location_name,
+            location_type=location_type,
+            save_directory=save_dir,
+            parent=self
+        )
+
+        dialog.images_generated.connect(self._on_ai_images_generated)
+        dialog.exec()
+
+    def _on_ai_images_generated(self, image_paths: list):
+        """
+        Handle AI-generated images for location
+
+        Args:
+            image_paths: List of generated image paths
+        """
+        # Add images to _images_to_add list
+        for image_path in image_paths:
+            if image_path not in self._images_to_add:
+                self._images_to_add.append(image_path)
+
+                # Add to UI list
+                item = QListWidgetItem(os.path.basename(image_path))
+                item.setData(Qt.ItemDataRole.UserRole, image_path)
+                self.images_list.addItem(item)
+
+        # Show success message
+        QMessageBox.information(
+            self,
+            "Immagini Generate",
+            f"{len(image_paths)} immagine/i generate e aggiunte.\n\n"
+            "Salva il luogo per confermare le modifiche."
+        )

@@ -4,11 +4,11 @@ The Novelist - Main Application Window (New Version)
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QSplitter,
                                QMessageBox, QFileDialog, QInputDialog, QProgressBar, QLabel, QDialog, QStackedWidget)
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, QIcon
 
 from ui.components import (MenuBar, ProjectTree, WorkspaceContainer,
                            ManuscriptView, CharactersListView, CharacterDetailView,
-                           StatisticsDashboard, ChaptersPreviewWidget, ScenesPreviewWidget,
+                           StatisticsDashboard, PartsPreviewWidget, ChaptersPreviewWidget, ScenesPreviewWidget,
                            ChapterDetailWidget, WorldbuildingListView, WorldbuildingDetailView)
 from ui.views import (LocationListView, LocationDetailView, ResearchListView,
                       ResearchDetailView, TimelineView, SourcesListView,
@@ -81,6 +81,13 @@ class TheNovelistMainWindow(QMainWindow):
     def _initialize_ui(self):
         """Initialize the user interface"""
         self.setWindowTitle("The Novelist")
+
+        # Set window icon
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                 'resources', 'logo_icon.png')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
         # Optimize for 13" screens (1280x800 minimum)
         self.setGeometry(100, 50, 1200, 700)
         self.setMinimumSize(1000, 600)  # Allow resizing down to reasonable minimum
@@ -151,6 +158,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.notes_list_view = NotesListView()
 
         # Preview widgets
+        self.parts_preview = PartsPreviewWidget()
         self.chapters_preview = ChaptersPreviewWidget()
         self.scenes_preview = ScenesPreviewWidget()
         self.chapter_detail = ChapterDetailWidget()
@@ -176,6 +184,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.workspace.add_view(WorkspaceContainer.VIEW_NOTES, self.notes_list_view)
 
         # Add preview views
+        self.workspace.add_view(WorkspaceContainer.VIEW_PARTS_PREVIEW, self.parts_preview)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW, self.chapters_preview)
         self.workspace.add_view(WorkspaceContainer.VIEW_SCENES_PREVIEW, self.scenes_preview)
         self.workspace.add_view(WorkspaceContainer.VIEW_CHAPTER_DETAIL, self.chapter_detail)
@@ -267,6 +276,7 @@ class TheNovelistMainWindow(QMainWindow):
 
         # Project tree signals
         self.project_tree.manuscript_selected.connect(self._on_manuscript_selected)
+        self.project_tree.part_selected.connect(self._on_part_selected_from_tree)
         self.project_tree.chapter_selected.connect(self._on_chapter_selected_for_preview)
         self.project_tree.scene_selected.connect(self._on_scene_selected)
         self.project_tree.characters_list_selected.connect(self._show_characters_list)
@@ -337,6 +347,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.manuscript_view.next_scene_requested.connect(self._go_to_next_scene)
 
         # Preview widget signals
+        self.parts_preview.part_clicked.connect(self._on_part_clicked_from_preview)
         self.chapters_preview.chapter_clicked.connect(self._on_chapter_clicked_from_preview)
         self.scenes_preview.scene_clicked.connect(self._on_scene_clicked_from_preview)
 
@@ -420,18 +431,8 @@ class TheNovelistMainWindow(QMainWindow):
                 self.project_manager.character_manager.get_all_characters(),
                 manuscript_structure
             )
-            # Select first scene or current scene
-            current_scene = manuscript_structure.current_scene_id
-            if current_scene:
-                self.project_tree.select_scene(current_scene)
-                self._on_scene_selected(current_scene)
-            else:
-                # Select first scene by default
-                all_scenes = manuscript_structure.get_all_scenes()
-                if all_scenes:
-                    first_scene = all_scenes[0]
-                    self.project_tree.select_scene(first_scene.id)
-                    self._on_scene_selected(first_scene.id)
+            # REMOVED: Auto scene selection (was causing unwanted focus changes)
+            # Scene selection should only happen when explicitly opening a project
 
             # Apply toolbar groups settings
             self._apply_toolbar_groups_settings()
@@ -643,6 +644,9 @@ class TheNovelistMainWindow(QMainWindow):
             project_metadata = project.to_dict()
             self.settings.add_recent_project(filepath, project_metadata)
             self._update_recent_projects_menu()
+
+            # ALWAYS show manuscript view when opening a project (never remember last position)
+            self.workspace.show_manuscript()
 
             # Start writing session
             text = self.manuscript_view.get_text()
@@ -1006,6 +1010,9 @@ class TheNovelistMainWindow(QMainWindow):
             project_metadata = project.to_dict()
             self.settings.add_recent_project(filepath, project_metadata)
             self._update_recent_projects_menu()
+
+            # ALWAYS show manuscript view when opening a project (never remember last position)
+            self.workspace.show_manuscript()
 
             self.statusBar().showMessage(f"Opened: {project.title}", 3000)
         else:
@@ -1475,18 +1482,53 @@ class TheNovelistMainWindow(QMainWindow):
             self.project_tree.select_scene(first_scene.id)
 
     def _on_manuscript_selected(self):
-        """Handle manuscript selection from tree - show chapters preview"""
+        """Handle manuscript selection from tree - show parts or chapters preview"""
         if not self.project_manager.has_project():
             return
 
         manager = self.project_manager.manuscript_structure_manager
-        chapters = manager.get_structure().chapters
+        structure = manager.get_structure()
 
-        # Load chapters into preview
-        self.chapters_preview.load_chapters(chapters)
+        # Check if using 3-level structure (Parts → Chapters → Scenes)
+        if structure.use_parts_structure:
+            # Load parts into preview
+            self.parts_preview.load_parts(structure.parts)
+            # Show parts preview
+            self.workspace.show_view(WorkspaceContainer.VIEW_PARTS_PREVIEW)
+        else:
+            # Legacy 2-level structure (Chapters → Scenes)
+            # Load chapters into preview
+            self.chapters_preview.load_chapters(structure.chapters)
+            # Show chapters preview
+            self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
 
-        # Show chapters preview
-        self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
+    def _on_part_selected_from_tree(self, part_id: str):
+        """Handle part selection from tree - show chapters of that part"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        part = manager.get_part(part_id)
+
+        if part:
+            # Load chapters of this part into chapters preview
+            self.chapters_preview.load_chapters(part.chapters)
+            # Show chapters preview
+            self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
+
+    def _on_part_clicked_from_preview(self, part_id: str):
+        """Handle part click from parts preview - show chapters of that part"""
+        if not self.project_manager.has_project():
+            return
+
+        manager = self.project_manager.manuscript_structure_manager
+        part = manager.get_part(part_id)
+
+        if part:
+            # Load chapters of this part into chapters preview
+            self.chapters_preview.load_chapters(part.chapters)
+            # Show chapters preview
+            self.workspace.show_view(WorkspaceContainer.VIEW_CHAPTERS_PREVIEW)
 
     def _on_chapter_selected_for_preview(self, chapter_id: str):
         """Handle chapter selection from tree - show chapter detail"""

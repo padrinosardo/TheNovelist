@@ -41,14 +41,19 @@ class ImageGalleryWidget(QWidget):
         self.add_btn = QPushButton("+ Add Image")
         self.add_btn.setStyleSheet("""
             QPushButton {
-                background-color: #2196F3;
+                background-color: #757575;
                 color: white;
                 border: none;
-                padding: 6px 12px;
-                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 13px;
+                border-radius: 5px;
+                font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #1976D2;
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
             }
         """)
         self.add_btn.clicked.connect(self._select_image)
@@ -209,14 +214,19 @@ class ImageThumbnail(QFrame):
         remove_btn = QPushButton("Remove")
         remove_btn.setStyleSheet("""
             QPushButton {
-                background-color: #f44336;
+                background-color: #757575;
                 color: white;
                 border: none;
                 padding: 4px;
                 font-size: 11px;
+                font-weight: bold;
+                border-radius: 3px;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
             }
         """)
         remove_btn.clicked.connect(lambda: self.remove_requested.emit(self.image_path))

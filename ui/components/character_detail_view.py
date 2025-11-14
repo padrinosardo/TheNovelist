@@ -11,6 +11,8 @@ from .context_sidebar import ContextSidebar, CollapsibleSidebarContainer
 from .ai_chat_widget import AIChatWidget
 from .rich_text_editor import RichTextEditor
 from managers.character_manager import CharacterManager
+from ui.dialogs.image_generation_dialog import ImageGenerationDialog
+from pathlib import Path
 
 
 class CharacterDetailView(QWidget):
@@ -150,6 +152,32 @@ class CharacterDetailView(QWidget):
 
         form_layout.addWidget(self.description_input)
 
+        # AI Image Generation button
+        ai_image_btn_layout = QHBoxLayout()
+        self.generate_image_btn = QPushButton("🎨 Genera Immagine AI")
+        self.generate_image_btn.setToolTip("Genera un'immagine del personaggio usando AI")
+        self.generate_image_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #757575;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                font-size: 13px;
+                font-weight: bold;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
+            }
+        """)
+        self.generate_image_btn.clicked.connect(self._on_generate_image)
+        ai_image_btn_layout.addStretch()
+        ai_image_btn_layout.addWidget(self.generate_image_btn)
+        form_layout.addLayout(ai_image_btn_layout)
+
         # Image gallery
         self.image_gallery = ImageGalleryWidget()
         self.image_gallery.image_added.connect(self._on_image_added)
@@ -165,16 +193,19 @@ class CharacterDetailView(QWidget):
         self.delete_btn = QPushButton("🗑️ Delete Character")
         self.delete_btn.setStyleSheet("""
             QPushButton {
-                background-color: #f44336;
+                background-color: #757575;
                 color: white;
                 border: none;
-                padding: 12px 24px;
-                font-size: 14px;
-                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 13px;
+                border-radius: 5px;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #d32f2f;
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
             }
         """)
         self.delete_btn.clicked.connect(self._on_delete)
@@ -184,16 +215,19 @@ class CharacterDetailView(QWidget):
         self.save_btn = QPushButton("💾 Save Changes")
         self.save_btn.setStyleSheet("""
             QPushButton {
-                background-color: #4CAF50;
+                background-color: #757575;
                 color: white;
                 border: none;
-                padding: 12px 24px;
-                font-size: 14px;
-                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 13px;
+                border-radius: 5px;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: #616161;
+            }
+            QPushButton:pressed {
+                background-color: #424242;
             }
         """)
         self.save_btn.clicked.connect(self._on_save)
@@ -415,3 +449,116 @@ class CharacterDetailView(QWidget):
             self.image_gallery.load_images(image_paths)
 
             self.character_updated.emit()
+
+    def _on_generate_image(self):
+        """
+        Open AI image generation dialog
+        """
+        from utils.logger import logger
+
+        logger.info("[IMAGE_GEN] Button clicked - starting image generation")
+
+        if not self._current_character_id or not self.character_manager:
+            logger.warning("[IMAGE_GEN] No character_id or manager")
+            return
+
+        # Get current character data
+        character = self.character_manager.get_character(self._current_character_id)
+        if not character:
+            logger.warning("[IMAGE_GEN] Character not found")
+            return
+
+        logger.info(f"[IMAGE_GEN] Character: {character.name}")
+
+        # Get OpenAI API key from project
+        api_key = None
+        if self.project_manager and self.project_manager.current_project:
+            project = self.project_manager.current_project
+            logger.info(f"[IMAGE_GEN] Project: {project.title}")
+            logger.info(f"[IMAGE_GEN] Has openai_image_api_key attr: {hasattr(project, 'openai_image_api_key')}")
+
+            # Check for dedicated OpenAI image generation key first
+            if hasattr(project, 'openai_image_api_key') and project.openai_image_api_key:
+                api_key = project.openai_image_api_key
+                logger.info("[IMAGE_GEN] Using dedicated image API key")
+            # Fallback to main provider if it's OpenAI
+            elif project.ai_provider_name == "openai" and project.ai_provider_config:
+                api_key = project.ai_provider_config.get("api_key")
+                logger.info("[IMAGE_GEN] Using main provider API key")
+
+            logger.info(f"[IMAGE_GEN] API key found: {bool(api_key)}")
+
+        if not api_key:
+            logger.warning("[IMAGE_GEN] No API key - showing dialog")
+            QMessageBox.warning(
+                self,
+                "API Key OpenAI Mancante",
+                "Per generare immagini con DALL-E è necessaria una chiave API OpenAI.\n\n"
+                "Configura la chiave in:\n"
+                "Progetto → Info Progetto → OpenAI Image API Key\n\n"
+                "(Separata dal provider AI principale)"
+            )
+            return
+
+        logger.info("[IMAGE_GEN] API key OK - opening dialog")
+
+        try:
+            # Create save directory in project images folder
+            project_dir = Path(self.project_manager.current_filepath).parent
+            save_dir = project_dir / "images" / "characters" / character.name.replace(" ", "_")
+            logger.info(f"[IMAGE_GEN] Save directory: {save_dir}")
+
+            # Open dialog
+            # NOTA: L'utente inserirà manualmente la descrizione fisica nel dialog
+            logger.info("[IMAGE_GEN] Creating ImageGenerationDialog...")
+            dialog = ImageGenerationDialog(
+                api_key=api_key,
+                entity_type="character",
+                entity_name=character.name,
+                save_directory=save_dir,
+                parent=self
+            )
+            logger.info("[IMAGE_GEN] Dialog created successfully")
+
+            dialog.images_generated.connect(self._on_ai_images_generated)
+            logger.info("[IMAGE_GEN] Calling dialog.exec()...")
+            dialog.exec()
+            logger.info("[IMAGE_GEN] Dialog closed")
+        except Exception as e:
+            logger.error(f"[IMAGE_GEN] Error opening dialog: {e}", exc_info=True)
+            QMessageBox.critical(
+                self,
+                "Errore",
+                f"Errore nell'apertura del dialog di generazione immagini:\n\n{str(e)}"
+            )
+
+    def _on_ai_images_generated(self, image_paths: list):
+        """
+        Handle AI-generated images
+
+        Args:
+            image_paths: List of generated image paths
+        """
+        if not self._current_character_id or not self.character_manager:
+            return
+
+        # Add each image to character
+        for image_path in image_paths:
+            filename = self.character_manager.add_image_to_character(
+                self._current_character_id,
+                image_path
+            )
+
+            if not filename:
+                QMessageBox.warning(
+                    self,
+                    "Errore",
+                    f"Impossibile aggiungere l'immagine: {Path(image_path).name}"
+                )
+
+        # Reload gallery
+        image_paths = self.character_manager.get_character_image_paths(
+            self._current_character_id
+        )
+        self.image_gallery.load_images(image_paths)
+        self.character_updated.emit()
