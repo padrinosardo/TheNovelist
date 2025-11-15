@@ -2,6 +2,13 @@
 """
 PyInstaller spec file for TheNovelist
 Supports both macOS and Windows builds
+
+IMPORTANT: This spec file is configured to:
+- Include all Python modules automatically via imports from main.py
+  (including zoom_manager.py, unified_text_editor.py, etc.)
+- Exclude test files and development tools
+- Bundle all resources from resources/ directory
+- Create optimized .app bundle for macOS
 """
 
 import sys
@@ -24,13 +31,17 @@ except:
 # Collect language-tool-python data
 language_tool_datas = collect_data_files('language_tool_python')
 
+# Collect pyspellchecker dictionary data
+spellchecker_datas = collect_data_files('spellchecker')
+
 # Add custom resources
 added_files = [
     ('resources', 'resources'),  # Include all templates and resources
+    ('config', 'config'),         # Include feature configuration files
 ]
 
 # Combine all data files
-datas = added_files + spacy_datas + it_model_datas + language_tool_datas
+datas = added_files + spacy_datas + it_model_datas + language_tool_datas + spellchecker_datas
 
 # Hidden imports needed by the application
 hiddenimports = [
@@ -61,11 +72,27 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
+        # GUI frameworks not used
         'tkinter',
+        # Data science libraries not needed (scipy removed - needed by sklearn/sentence-transformers)
         'matplotlib',
         'pandas',
-        'scipy',
+        'numpy.testing',
+        # Testing frameworks and tools (unittest removed - needed by PyTorch)
         'pytest',
+        'pytest_cov',
+        'pytest_qt',
+        '_pytest',
+        'test',
+        'tests',
+        # Development tools
+        'IPython',
+        'jupyter',
+        'setuptools',
+        'distutils',
+        # Documentation
+        'sphinx',
+        'docutils',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
