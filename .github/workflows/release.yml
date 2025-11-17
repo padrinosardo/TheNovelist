@@ -134,8 +134,8 @@ jobs:
             libxcb-shape0 \
             libxkbcommon-x11-0 \
             libdbus-1-3 \
-            libgl1-mesa-glx \
-            libegl1-mesa
+            libgl1 \
+            libegl1
 
       - name: Install dependencies
         run: |
