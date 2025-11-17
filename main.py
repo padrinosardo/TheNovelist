@@ -33,7 +33,7 @@ def warning_handler(message, category, filename, lineno, file=None, line=None):
 warnings.showwarning = warning_handler
 
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QPalette, QColor, QFont
+from PySide6.QtGui import QPalette, QColor, QFont, QIcon
 from PySide6.QtCore import Qt, QEvent
 
 # Import custom modules
@@ -215,6 +215,13 @@ def apply_adaptive_stylesheet(app: QApplication):
 def main():
     """Application entry point"""
     app = QApplication(sys.argv)
+
+    # Set application icon (visible in Dock/Taskbar and app switcher)
+    icon_path = os.path.join(BASE_PATH, 'resources', 'logo_icon.png')
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    else:
+        print(f"Warning: Icon not found at {icon_path}")
 
     # Set default font size for the entire application
     default_font = QFont()

@@ -136,6 +136,7 @@ if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
         name='TheNovelist.app',
+        icon='resources/TheNovelist.icns',  # FIX: Add application icon
         bundle_identifier='com.thenovelist.app',
         info_plist={
             'NSPrincipalClass': 'NSApplication',
@@ -145,5 +146,6 @@ if sys.platform == 'darwin':
             'CFBundleVersion': '1.0.0',
             'CFBundleShortVersionString': '1.0.0',
             'NSHumanReadableCopyright': 'Copyright © 2024',
+            'CFBundleIconFile': 'TheNovelist.icns',  # FIX: Reference icon in Info.plist
         },
     )
