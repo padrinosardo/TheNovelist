@@ -1,0 +1,299 @@
+# TheNovelist Feature Configuration
+# Change tier assignments here to move features between free/premium
+
+version: "1.0"
+last_updated: "2025-01-06"
+
+# ============================================
+# FEATURE DEFINITIONS
+# ============================================
+
+features:
+
+  # ==================
+  # CORE WRITING TOOLS
+  # ==================
+
+  manuscript_editor:
+    tier: free
+    name: "Manuscript Editor"
+    description: "Full-featured rich text editor"
+    category: "writing"
+    since: "1.0"
+
+  spell_check:
+    tier: free
+    name: "Spell Check"
+    description: "Real-time spell checking"
+    category: "writing"
+    since: "1.0"
+
+  grammar_check:
+    tier: free
+    name: "Grammar Check"
+    description: "LanguageTool grammar checking"
+    category: "writing"
+    since: "1.0"
+
+  auto_save:
+    tier: free
+    name: "Auto Save"
+    description: "Automatic local save"
+    category: "writing"
+    since: "1.0"
+
+  # ==================
+  # AI FEATURES
+  # ==================
+
+  ai_chat_basic:
+    tier: free
+    name: "AI Chat"
+    description: "Basic AI assistance with Ollama, OpenAI, Claude"
+    category: "ai"
+    since: "1.0"
+    notes: "User provides own API keys (BYOK model)"
+
+  rag_system:
+    tier: premium
+    name: "Context-Aware AI (RAG)"
+    description: "AI that remembers your story context automatically"
+    category: "ai"
+    since: "2.0"
+    value_props:
+      - "Saves 2+ hours per week"
+      - "No more manual context copying"
+      - "Consistent story lore"
+    upgrade_cta: "Upgrade to unlock RAG"
+
+  ai_character_assistant:
+    tier: premium
+    name: "AI Character Assistant"
+    description: "Advanced AI-powered character development"
+    category: "ai"
+    since: "2.0"
+    value_props:
+      - "Deep character profiles"
+      - "Relationship mapping"
+      - "Context-aware suggestions"
+
+  ai_custom_commands:
+    tier: free
+    name: "Custom AI Commands"
+    description: "Create custom AI prompt templates"
+    category: "ai"
+    since: "2.0"
+    limit_free: 3
+    limit_premium: null
+
+  ai_writing_guides:
+    tier: premium
+    name: "Genre-Specific Writing Guides"
+    description: "AI guides tailored to your genre"
+    category: "ai"
+    since: "2.0"
+    value_props:
+      - "Horror, Fantasy, Sci-Fi, Mystery, Romance"
+      - "Genre-appropriate AI suggestions"
+
+  # ==================
+  # WORLDBUILDING
+  # ==================
+
+  worldbuilding_characters:
+    tier: free
+    name: "Characters"
+    description: "Character profiles and tracking"
+    category: "worldbuilding"
+    since: "1.0"
+    limit_free: 50
+    limit_premium: null
+
+  worldbuilding_locations:
+    tier: free
+    name: "Locations"
+    description: "Location database"
+    category: "worldbuilding"
+    since: "1.0"
+    limit_free: 30
+    limit_premium: null
+
+  worldbuilding_timeline:
+    tier: free
+    name: "Timeline"
+    description: "Story timeline and events"
+    category: "worldbuilding"
+    since: "1.0"
+    limit_free: 100
+    limit_premium: null
+
+  worldbuilding_custom:
+    tier: free
+    name: "Custom Worldbuilding Categories"
+    description: "Magic systems, cultures, etc."
+    category: "worldbuilding"
+    since: "1.0"
+    limit_free: 5
+    limit_premium: null
+
+  # ==================
+  # EXPORT
+  # ==================
+
+  export_basic:
+    tier: free
+    name: "Basic Export"
+    description: "Export to standard formats"
+    category: "export"
+    since: "1.0"
+    formats:
+      - "txt"
+      - "markdown"
+      - "docx_basic"
+      - "pdf_basic"
+
+  export_professional:
+    tier: premium
+    name: "Professional Export"
+    description: "Publisher-ready manuscript formatting"
+    category: "export"
+    since: "2.0"
+    formats:
+      - "docx_manuscript"
+      - "pdf_manuscript"
+      - "epub"
+      - "screenplay_pdf"
+    value_props:
+      - "Industry-standard formatting"
+      - "Submit directly to agents/publishers"
+
+  export_batch:
+    tier: premium
+    name: "Batch Export"
+    description: "Export multiple formats at once"
+    category: "export"
+    since: "2.0"
+
+  # ==================
+  # COLLABORATION
+  # ==================
+
+  cloud_sync:
+    tier: premium
+    name: "Cloud Sync"
+    description: "Sync projects across devices"
+    category: "collaboration"
+    since: "2.1"
+    max_devices_premium: 3
+
+  collaboration_realtime:
+    tier: premium
+    name: "Real-time Collaboration"
+    description: "Share and co-write in real-time"
+    category: "collaboration"
+    since: "2.1"
+    value_props:
+      - "Share projects with co-authors"
+      - "Real-time editing"
+      - "Comments and feedback"
+
+  version_history:
+    tier: premium
+    name: "Version History"
+    description: "Track changes and restore previous versions"
+    category: "collaboration"
+    since: "2.1"
+
+  # ==================
+  # ANALYTICS
+  # ==================
+
+  analytics_basic:
+    tier: free
+    name: "Basic Statistics"
+    description: "Word count, session time, writing streak"
+    category: "analytics"
+    since: "1.0"
+
+  analytics_advanced:
+    tier: premium
+    name: "Productivity Analytics"
+    description: "Deep insights into your writing habits"
+    category: "analytics"
+    since: "2.0"
+    features:
+      - "Heatmap calendar"
+      - "Goal tracking with predictions"
+      - "Writing velocity trends"
+      - "Export analytics reports"
+    value_props:
+      - "Hit deadlines with data-driven insights"
+      - "Understand your productivity patterns"
+
+# ============================================
+# TIER DEFINITIONS
+# ============================================
+
+tiers:
+  free:
+    name: "Free"
+    price: 0
+    description: "Professional writing tools, free forever"
+    features_included:
+      - "All writing tools"
+      - "AI chat (BYOK)"
+      - "50 characters, 30 locations"
+      - "Basic export"
+      - "Community support"
+
+  premium:
+    name: "Pro"
+    price_monthly: 9.99
+    price_yearly: 99
+    currency: "EUR"
+    description: "Advanced features for serious writers"
+    features_included:
+      - "Everything in Free"
+      - "Context-aware AI (RAG)"
+      - "Unlimited worldbuilding"
+      - "Professional export"
+      - "Cloud sync & collaboration"
+      - "Advanced analytics"
+      - "Priority email support"
+
+  team:
+    name: "Team"
+    price_monthly: 29
+    price_yearly: 290
+    currency: "EUR"
+    seats: 5
+    description: "For writing teams and groups"
+    features_included:
+      - "Everything in Pro"
+      - "5 user seats"
+      - "Shared workspaces"
+      - "Team analytics"
+      - "Admin controls"
+
+  studio:
+    name: "Studio"
+    price: "custom"
+    description: "Enterprise features for publishers and studios"
+    contact_sales: true
+    features_included:
+      - "Everything in Team"
+      - "Unlimited users"
+      - "Custom AI training"
+      - "SSO integration"
+      - "Dedicated support"
+      - "SLA guarantee"
+
+# ============================================
+# METADATA
+# ============================================
+
+meta:
+  total_features: 24
+  free_features: 12
+  premium_features: 12
+  migration_notes: "To move a feature, change its 'tier' value"
