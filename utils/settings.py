@@ -57,6 +57,7 @@ class SettingsManager:
             "theme": "light",
             "window_geometry": None,
             "last_directory": str(Path.home() / "Documents"),
+            "default_projects_folder": str(Path.home() / "Documents"),  # User-configurable default folder
             "preferred_ui_language": "it",  # UI language (separate from project language)
             "editor_zoom_level": 100,  # Editor zoom level (50-200%)
             "editor_font_size": 14,  # Font size for text editors (8-72pt)
@@ -127,6 +128,8 @@ class SettingsManager:
             filepath: Full path to project file
             project_metadata: Optional project metadata dict (title, type, dates, etc.)
         """
+        from datetime import datetime
+
         recent = self.settings.get("recent_projects", [])
 
         # Ensure recent is a list (backward compatibility)
@@ -140,6 +143,9 @@ class SettingsManager:
         # Remove if already in list (match by filepath)
         recent = [item for item in recent if item.get("filepath") != filepath]
 
+        # ALWAYS set last_opened_date to NOW when adding/updating a recent project
+        current_time = datetime.now().isoformat()
+
         # Create metadata entry
         if project_metadata:
             entry = {
@@ -149,13 +155,16 @@ class SettingsManager:
                 "project_type": project_metadata.get("project_type", "novel"),
                 "created_date": project_metadata.get("created_date", ""),
                 "modified_date": project_metadata.get("modified_date", ""),
-                "last_opened_date": project_metadata.get("last_opened_date", ""),
+                "last_opened_date": current_time,  # FIX: Always use current time
                 "genre": project_metadata.get("genre", ""),
                 "target_word_count": project_metadata.get("target_word_count", 0)
             }
         else:
             # Minimal entry if no metadata provided
-            entry = {"filepath": filepath}
+            entry = {
+                "filepath": filepath,
+                "last_opened_date": current_time  # FIX: Set current time even for minimal entry
+            }
 
         # Add to front
         recent.insert(0, entry)
@@ -284,6 +293,32 @@ class SettingsManager:
     def set_last_directory(self, directory: str):
         """Set last used directory"""
         self.set("last_directory", directory)
+
+    def get_default_projects_folder(self) -> str:
+        """
+        Get user-configured default projects folder
+
+        This setting persists across application updates as it's stored
+        in ~/.thenovelist/settings.json
+
+        Returns:
+            str: Path to default projects folder
+        """
+        return self.settings.get("default_projects_folder", str(Path.home() / "Documents"))
+
+    def set_default_projects_folder(self, folder: str):
+        """
+        Set user-configured default projects folder
+
+        This folder will be used as the starting directory for:
+        - New project creation
+        - Open project dialog
+        - Export operations
+
+        Args:
+            folder: Path to default projects folder
+        """
+        self.set("default_projects_folder", folder)
 
     # ==================== Language ====================
 

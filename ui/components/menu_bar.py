@@ -55,6 +55,7 @@ class MenuBar(QMenuBar):
     repetitions_check_requested = Signal()
     style_check_requested = Signal()
     ai_settings_requested = Signal()
+    preferences_requested = Signal()  # FIX: Application preferences
 
     # Help menu signals
     documentation_requested = Signal()
@@ -152,6 +153,15 @@ class MenuBar(QMenuBar):
         restore_action.triggered.connect(self.restore_backup_requested.emit)
         file_menu.addAction(restore_action)
         self.restore_action = restore_action
+
+        file_menu.addSeparator()
+
+        # Preferences
+        preferences_action = QAction("&Preferenze...", self)
+        preferences_action.setShortcut(QKeySequence("Ctrl+,"))
+        preferences_action.setStatusTip("Configurazione applicazione")
+        preferences_action.triggered.connect(self.preferences_requested.emit)
+        file_menu.addAction(preferences_action)
 
         file_menu.addSeparator()
 

@@ -276,6 +276,7 @@ class TheNovelistMainWindow(QMainWindow):
         self.menu_bar.repetitions_check_requested.connect(self.analyze_repetitions)
         self.menu_bar.style_check_requested.connect(self.analyze_style)
         self.menu_bar.ai_settings_requested.connect(self._open_ai_settings)
+        self.menu_bar.preferences_requested.connect(self._open_preferences)  # FIX: Preferences dialog
 
         # Help menu
         self.menu_bar.view_error_log_requested.connect(self._view_error_log)
@@ -517,11 +518,14 @@ class TheNovelistMainWindow(QMainWindow):
         (title, author, language, project_type, genre, target_word_count, tags, use_template,
          ai_provider_name, ai_provider_config) = dialog.get_project_data()
 
-        # Get save location
+        # Get save location (use default projects folder from preferences)
+        default_folder = self.settings.get_default_projects_folder()
+        default_path = os.path.join(default_folder, f"{Validators.sanitize_filename(title)}.tnp")
+
         filepath, _ = QFileDialog.getSaveFileName(
             self,
             "Save New Project",
-            f"{Validators.sanitize_filename(title)}.tnp",
+            default_path,
             "The Novelist Project (*.tnp)"
         )
 
@@ -602,11 +606,13 @@ class TheNovelistMainWindow(QMainWindow):
         if not self._check_unsaved_changes():
             return
 
-        # Select project file
+        # Select project file (use default projects folder from preferences)
+        default_folder = self.settings.get_default_projects_folder()
+
         filepath, _ = QFileDialog.getOpenFileName(
             self,
             "Open Project",
-            "",
+            default_folder,
             "The Novelist Project (*.tnp)"
         )
 
@@ -724,6 +730,17 @@ class TheNovelistMainWindow(QMainWindow):
             self.is_modified = False
             self._update_ui_state()
 
+            # Update recent projects list
+            filepath = self.project_manager.current_filepath
+            project = self.project_manager.current_project
+            if project and filepath:
+                from datetime import datetime
+                project_metadata = project.to_dict()
+                # Force update modified_date to NOW when saving
+                project_metadata['modified_date'] = datetime.now().isoformat()
+                self.settings.add_recent_project(filepath, project_metadata)
+                self._update_recent_projects_menu()
+
             # Start a new session after saving
             word_count = len(manuscript_text.split())
             char_count = len(manuscript_text)
@@ -744,10 +761,14 @@ class TheNovelistMainWindow(QMainWindow):
         if not self.project_manager.has_project():
             return False
 
+        # Use default projects folder from preferences
+        default_folder = self.settings.get_default_projects_folder()
+        default_path = os.path.join(default_folder, f"{self.project_manager.get_project_title()}.tnp")
+
         filepath, _ = QFileDialog.getSaveFileName(
             self,
             "Save Project As",
-            f"{self.project_manager.get_project_title()}.tnp",
+            default_path,
             "The Novelist Project (*.tnp)"
         )
 
@@ -2521,6 +2542,13 @@ class TheNovelistMainWindow(QMainWindow):
 
         ai_manager = AIManager()
         dialog = AISettingsDialog(ai_manager, self)
+        dialog.exec()
+
+    def _open_preferences(self):
+        """Open Application Preferences dialog"""
+        from ui.dialogs.preferences_dialog import PreferencesDialog
+
+        dialog = PreferencesDialog(self.settings, self)
         dialog.exec()
 
     # ==================== Dynamic Containers ====================
